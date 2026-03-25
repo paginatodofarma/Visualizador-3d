@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo Pose + Camisa 3D</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+        #container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #canvas3d {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+        button {
+            margin: 5px;
+            padding: 8px 12px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <video id="video" autoplay muted></video>
+        <canvas id="canvas3d"></canvas>
+        <div id="controls">
+            <h3>Prototipo Camisa Virtual</h3>
+            <button onclick="togglePoseDetection()">Iniciar/Detener Detección</button>
+            <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
+            <p id="status">Estado: Iniciando...</p>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let pose;
+        let camera;
+        let scene, camera3d, renderer;
+        let shirtMesh;
+        let isDetecting = false;
+        let showShirt = true;
+
+        // Inicializar Three.js
+        function initThreeJS() {
+            // Escena
+            scene = new THREE.Scene();
+
+            // Cámara
+            camera3d = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera3d.position.z = 5;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); // Fondo transparente
+
+            // Luz
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(0, 1, 1);
+            scene.add(directionalLight);
+
+            // Crear camisa básica (cubo azul por ahora)
+            const geometry = new THREE.BoxGeometry(1, 1.2, 0.1);
+            const material = new THREE.MeshLambertMaterial({ color: 0x0088ff, transparent: true, opacity: 0.7 });
+            shirtMesh = new THREE.Mesh(geometry, material);
+            shirtMesh.visible = showShirt;
+            scene.add(shirtMesh);
+
+            // Animar
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera3d);
+        }
+
+        // Inicializar MediaPipe Pose
+        function initPose() {
+            pose = new Pose({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
+                }
+            });
+
+            pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                smoothSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            pose.onResults(onResults);
+
+            camera = new Camera(document.getElementById('video'), {
+                onFrame: async () => {
+                    if (isDetecting) {
+                        await pose.send({ image: document.getElementById('video') });
+                    }
+                },
+                width: 640,
+                height: 480
+            });
+        }
+
+        // Procesar resultados de pose
+        function onResults(results) {
+            if (!results.poseLandmarks) return;
+
+            updateShirtPosition(results.poseLandmarks);
+        }
+
+        // Actualizar posición de la camisa basada en landmarks
+        function updateShirtPosition(landmarks) {
+            if (!shirtMesh || !showShirt) return;
+
+            // Obtener posiciones de hombros y caderas
+            const leftShoulder = landmarks[11]; // hombro izquierdo
+            const rightShoulder = landmarks[12]; // hombro derecho
+            const leftHip = landmarks[23]; // cadera izquierda
+            const rightHip = landmarks[24]; // cadera derecha
+
+            if (leftShoulder && rightShoulder && leftHip && rightHip) {
+                // Calcular centro del torso
+                const centerX = (leftShoulder.x + rightShoulder.x) / 2;
+                const centerY = (leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4;
+                const centerZ = (leftShoulder.z + rightShoulder.z) / 2;
+
+                // Calcular ancho y alto del torso
+                const torsoWidth = Math.abs(rightShoulder.x - leftShoulder.x);
+                const torsoHeight = Math.abs((leftShoulder.y + rightShoulder.y) / 2 - (leftHip.y + rightHip.y) / 2);
+
+                // Escalar y posicionar la camisa
+                shirtMesh.scale.set(torsoWidth * 3, torsoHeight * 3, 0.1);
+
+                // Convertir coordenadas normalizadas a espacio 3D
+                shirtMesh.position.x = (centerX - 0.5) * 4; // Ajustar escala
+                shirtMesh.position.y = -(centerY - 0.5) * 3; // Invertir Y y ajustar
+                shirtMesh.position.z = centerZ * 2;
+
+                // Rotación básica (simplificada)
+                const shoulderAngle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
+                shirtMesh.rotation.z = shoulderAngle;
+            }
+        }
+
+        // Funciones de control
+        function togglePoseDetection() {
+            isDetecting = !isDetecting;
+            document.getElementById('status').textContent = isDetecting ? 'Estado: Detectando pose...' : 'Estado: Detección detenida';
+            if (isDetecting) {
+                camera.start();
+            } else {
+                camera.stop();
+            }
+        }
+
+        function toggleShirt() {
+            showShirt = !showShirt;
+            if (shirtMesh) {
+                shirtMesh.visible = showShirt;
+            }
+        }
+
+        // Inicializar todo
+        window.onload = function() {
+            initThreeJS();
+            initPose();
+            document.getElementById('status').textContent = 'Estado: Listo. Haz clic en "Iniciar Detección"';
+        };
+
+        // Manejar resize
+        window.addEventListener('resize', () => {
+            camera3d.aspect = window.innerWidth / window.innerHeight;
+            camera3d.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

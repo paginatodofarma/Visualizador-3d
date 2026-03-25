@@ -9,6 +9,7 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 - Controles de cámara y rotación automática
 - Lista de modelos disponibles en la carpeta `Modelos/` y subcarpetas
 - **Compartir enlaces:** Genera URLs directas a modelos específicos para compartir
+- **Modo Pose + Camisa Virtual:** Prototipo experimental con MediaPipe y Three.js para superponer una camisa 3D basada en pose corporal
 
 ## Configuración de GitHub Pages
 
@@ -44,10 +45,29 @@ El listado se actualizará automáticamente al cargar la página, obteniendo los
 - `<model-viewer>`: Librería de Google para visualización 3D. Se carga desde CDN.
 
 ## Soporte AR
+...
+## Modo Pose + Camisa Virtual (Experimental)
 
-El visualizador incluye soporte para AR en:
-- WebXR (navegadores compatibles)
-- Scene Viewer (Android)
-- Quick Look (iOS)
+Este proyecto incluye un prototipo experimental (`prototipo-pose-camisa.html`) que combina MediaPipe Pose Landmarker con Three.js para crear una experiencia de "puesta de ropa virtual":
 
-Asegúrate de que tu dispositivo y navegador soporten AR.
+### Cómo usar:
+1. Abre `prototipo-pose-camisa.html` en un navegador moderno con webcam.
+2. Permite acceso a la cámara.
+3. Haz clic en "Iniciar/Detener Detección" para activar la detección de pose.
+4. La camisa 3D azul se posicionará automáticamente sobre tu torso.
+5. Usa "Mostrar/Ocultar Camisa" para alternar la visibilidad.
+
+### Tecnologías:
+- **MediaPipe Pose:** Detecta 33 landmarks corporales en tiempo real.
+- **Three.js:** Renderiza la camisa 3D y la superpone sobre el video.
+- **Webcam:** Captura video en vivo para análisis de pose.
+
+### Limitaciones actuales:
+- Modelo de camisa básico (cubo azul).
+- Alineación simplificada basada en hombros y caderas.
+- Requiere buena iluminación y pose frontal.
+
+### Próximos pasos:
+- Integrar modelos GLB reales de ropa.
+- Mejorar el rigging y deformación de tela.
+- Agregar más prendas y opciones de personalización.
