@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototipo Pose Landmarker - TodoFarma</title>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675469404/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675469404/drawing_utils.js"></script>
     <style>
         body {
@@ -116,15 +115,26 @@
         });
 
         // Configurar cámara
-        const camera_utils = new window.Camera(document.getElementById('video'), {
-            onFrame: async () => {
-                await pose.send({ image: document.getElementById('video') });
-            },
-            width: 640,
-            height: 480
-        });
+        async function setupCamera() {
+            const video = document.getElementById('video');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    processFrame();
+                };
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+            }
+        }
 
-        camera_utils.start();
+        function processFrame() {
+            pose.send({ image: document.getElementById('video') });
+            requestAnimationFrame(processFrame);
+        }
+
+        setupCamera();
 
         // Animar continuamente
         function animate() {
