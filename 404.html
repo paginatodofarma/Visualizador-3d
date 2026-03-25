@@ -80,19 +80,11 @@
     </div>
 
     <script>
-        const models = [
-            'prueba',
-            'modelo1',
-            'modelo2',
-            'modelo3',
-            'modelo4',
-            'modelo5',
-            'modelo6',
-            'modelo7',
-            'modelo8',
-            'modelo9',
-            'modelo10'
-        ];
+        let models = [];
+        const fallbackModels = ['prueba'];
+        const repoOwner = 'paginatodofarma';
+        const repoName = 'Visualizador-3d';
+        const modelsPath = 'Modelos';
 
         function getBasePath() {
             const path = window.location.pathname;
@@ -132,31 +124,48 @@
             });
         }
 
-        window.onload = function() {
-            renderModelList();
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            const modelName = segments.length > 1 ? segments[1] : 'prueba';
-            if (models.includes(modelName)) {
-                loadModel(modelName, false);
-            } else {
-                loadModel('prueba', false);
-            }
-        };
+        function fetchModelsFromGithub() {
+            const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${modelsPath}`;
+            return fetch(url)
+                .then(resp => {
+                    if (!resp.ok) throw new Error('GitHub API request failed');
+                    return resp.json();
+                })
+                .then(data => data
+                    .filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.glb'))
+                    .map(item => item.name.replace(/\.glb$/i, ''))
+                );
+        }
+
+        function init() {
+            fetchModelsFromGithub()
+                .then(data => {
+                    models = data;
+                    if (!models.length) models = fallbackModels;
+                    renderModelList();
+                    const path = window.location.pathname;
+                    const segments = path.split('/').filter(Boolean);
+                    const modelName = segments.length > 1 ? segments[1] : models[0];
+                    loadModel(models.includes(modelName) ? modelName : models[0], false);
+                })
+                .catch(() => {
+                    models = fallbackModels;
+                    renderModelList();
+                    loadModel(models[0], false);
+                });
+        }
+
+        window.onload = init;
 
         window.onpopstate = function() {
             const path = window.location.pathname;
             const segments = path.split('/').filter(Boolean);
-            const modelName = segments.length > 1 ? segments[1] : 'prueba';
-            if (models.includes(modelName)) {
-                loadModel(modelName, false);
-            } else {
-                loadModel('prueba', false);
-            }
+            const modelName = segments.length > 1 ? segments[1] : models[0];
+            loadModel(models.includes(modelName) ? modelName : models[0], false);
         };
 
         document.getElementById('copyLink').addEventListener('click', () => {
-            const modelName = document.querySelector('#modelList li.selected')?.dataset.name || 'prueba';
+            const modelName = document.querySelector('#modelList li.selected')?.dataset.name || models[0];
             const url = updateCurrentUrl(modelName);
             navigator.clipboard.writeText(url).then(() => {
                 alert('URL copiada al portapapeles:\n' + url);

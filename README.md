@@ -25,12 +25,13 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 ## Agregar Más Modelos
 
 1. Coloca tus archivos .glb en la carpeta `Modelos/`.
-2. Ejecuta el script para generar/actualizar automáticamente el listado:
+2. La página ahora consulta automáticamente la carpeta `Modelos/` en tu repositorio GitHub público interno, por lo que NO es necesario actualizar la lista manualmente.
 
-   `node generate-modelos.js`
+- Se viaja a:
+  `https://api.github.com/repos/paginatodofarma/Visualizador-3d/contents/Modelos`
+- Si por alguna razón falla la API, usa `modelos.json` como respaldo.
 
-3. Verifica `modelos.json` contiene todos los nombres (sin .glb).
-4. Sube a GitHub.
+3. Sube a GitHub.
 
 ## Routing y URL directa por modelo
 
