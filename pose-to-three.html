@@ -29,8 +29,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 
+  <script>
+    console.log('Script básico cargado - inicio');
+    // Verificar si THREE está disponible
+    if (typeof THREE === 'undefined') {
+      console.error('THREE.js no está cargado');
+    } else {
+      console.log('THREE.js cargado correctamente');
+    }
+  </script>
+
   <script type="module">
-    console.log('Script pose-to-three.html iniciado correctamente');
+    console.log('Script pose-to-three.html iniciado correctamente (module)');
     const modelPath = 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf'; // Modelo simple de prueba
     const keypointIndices = {
       leftShoulder: 11,
