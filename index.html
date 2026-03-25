@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador 3D - TodoFarma</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .viewer-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        model-viewer {
+            width: 100%;
+            height: 500px;
+        }
+        .model-list {
+            margin-top: 20px;
+        }
+        .model-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        .model-list li {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e9e9e9;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .model-list li:hover {
+            background: #d9d9d9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizador 3D de Modelos GLB</h1>
+    <div class="viewer-container">
+        <model-viewer
+            id="modelViewer"
+            src="Modelos/prueba.glb"
+            alt="Modelo 3D"
+            ar
+            ar-modes="webxr scene-viewer quick-look"
+            ar-scale="auto"
+            camera-controls
+            auto-rotate
+            shadow-intensity="1">
+        </model-viewer>
+        <div class="model-list">
+            <h2>Modelos Disponibles</h2>
+            <ul id="modelList">
+                <li onclick="loadModel('Modelos/prueba.glb')">prueba.glb</li>
+                <!-- Agregar más modelos aquí -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function loadModel(src) {
+            const viewer = document.getElementById('modelViewer');
+            viewer.src = src;
+        }
+
+        // Función para cargar modelos dinámicamente si es necesario
+        // Por ahora, hardcodeados
+    </script>
+</body>
+</html>
