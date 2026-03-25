@@ -4,91 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visualizador 3D y AR</title>
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
-        h1 {
-            text-align: center;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        model-viewer {
-            width: 100%;
-            height: 500px;
-            background-color: #fff;
-            border: 1px solid #ccc;
-        }
-        .controls {
-            margin-top: 20px;
-            text-align: center;
-        }
-        select {
-            padding: 10px;
-            font-size: 16px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Visualizador 3D y AR para Modelos GLB</h1>
-        <div class="controls">
-            <label for="model-select">Selecciona un modelo:</label>
-            <select id="model-select">
-                <!-- Los modelos se agregarán dinámicamente -->
-            </select>
-        </div>
-        <model-viewer
-            id="model-viewer"
-            src=""
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-            camera-controls
-            auto-rotate
-            shadow-intensity="1"
-            exposure="1"
-            environment-image="neutral">
-            <button slot="ar-button" id="ar-button">
-                Ver en AR
-            </button>
-        </model-viewer>
+    <h1>Visualizador 3D y AR para Modelos .glb</h1>
+    <div id="model-selector">
+        <label for="model-select">Selecciona un modelo:</label>
+        <select id="model-select">
+            <!-- Opciones se cargarán dinámicamente -->
+        </select>
     </div>
-
-    <script>
-        // Lista de modelos en la carpeta Modelos
-        const models = [
-            'modelo1.glb',
-            'modelo2.glb',
-            // Agrega más modelos aquí
-        ];
-
-        const select = document.getElementById('model-select');
-        const modelViewer = document.getElementById('model-viewer');
-
-        // Poblar el select
-        models.forEach(model => {
-            const option = document.createElement('option');
-            option.value = `Modelos/${model}`;
-            option.textContent = model;
-            select.appendChild(option);
-        });
-
-        // Cambiar modelo al seleccionar
-        select.addEventListener('change', (event) => {
-            modelViewer.src = event.target.value;
-        });
-
-        // Cargar el primer modelo por defecto si existe
-        if (models.length > 0) {
-            modelViewer.src = `Modelos/${models[0]}`;
-            select.value = `Modelos/${models[0]}`;
-        }
-    </script>
+    <div id="viewer-container">
+        <div id="viewer"></div>
+        <button id="ar-button" style="display: none;">Ver en AR</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
