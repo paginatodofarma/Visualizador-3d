@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototipo Pose Landmarker - TodoFarma</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675469404/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675469404/drawing_utils.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+        }
+        #video {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+        }
+        #canvas {
+            width: 640px;
+            height: 480px;
+            border: 1px solid #ccc;
+        }
+        .info {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Prototipo Pose Landmarker con Three.js</h1>
+    <div class="container">
+        <div>
+            <h2>Cámara</h2>
+            <video id="video" autoplay playsinline></video>
+        </div>
+        <div>
+            <h2>Modelo 3D Animado</h2>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+    <div class="info">
+        <p>Permite acceso a la cámara para detectar poses. El cubo en 3D se rota basado en la pose de los brazos.</p>
+    </div>
+
+    <script>
+        // Inicializar Three.js
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, 640 / 480, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
+        renderer.setSize(640, 480);
+
+        // Crear un cubo simple
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        camera.position.z = 5;
+
+        // Función para animar el cubo
+        function animateCube(landmarks) {
+            if (landmarks && landmarks.length > 0) {
+                // Usar landmarks de hombros y codos para rotación
+                const leftShoulder = landmarks[11]; // Hombro izquierdo
+                const rightShoulder = landmarks[12]; // Hombro derecho
+                const leftElbow = landmarks[13]; // Codo izquierdo
+                const rightElbow = landmarks[14]; // Codo derecho
+
+                if (leftShoulder && rightShoulder && leftElbow && rightElbow) {
+                    // Calcular ángulo basado en diferencia de posiciones
+                    const leftArmAngle = Math.atan2(leftElbow.y - leftShoulder.y, leftElbow.x - leftShoulder.x);
+                    const rightArmAngle = Math.atan2(rightElbow.y - rightShoulder.y, rightElbow.x - rightShoulder.x);
+
+                    // Rotar el cubo basado en el promedio de los ángulos
+                    cube.rotation.x = (leftArmAngle + rightArmAngle) / 2;
+                    cube.rotation.y = (leftArmAngle - rightArmAngle) / 2;
+                }
+            }
+            renderer.render(scene, camera);
+        }
+
+        // Inicializar MediaPipe Pose
+        const pose = new Pose({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
+            }
+        });
+
+        pose.setOptions({
+            modelComplexity: 1,
+            smoothLandmarks: true,
+            enableSegmentation: false,
+            smoothSegmentation: false,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        pose.onResults((results) => {
+            if (results.poseLandmarks) {
+                animateCube(results.poseLandmarks);
+            }
+        });
+
+        // Configurar cámara
+        const camera_utils = new Camera(document.getElementById('video'), {
+            onFrame: async () => {
+                await pose.send({ image: document.getElementById('video') });
+            },
+            width: 640,
+            height: 480
+        });
+
+        camera_utils.start();
+
+        // Animar continuamente
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\Grupo TodoFarma C.A\Downloads\Visualizador 3d\pose-prototype.html

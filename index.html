@@ -72,6 +72,7 @@
             shadow-intensity="1">
         </model-viewer>
         <button class="share-button" onclick="shareCurrentModel()">Compartir Enlace del Modelo Actual</button>
+        <button class="share-button" onclick="openPosePrototype()" style="margin-left: 10px;">Prototipo Pose Landmarker</button>
         <div class="model-list">
             <h2>Modelos Disponibles</h2>
             <ul id="modelList">
@@ -178,6 +179,10 @@
                 document.body.removeChild(textArea);
                 alert('Enlace copiado al portapapeles: ' + url.toString());
             });
+        }
+
+        function openPosePrototype() {
+            window.open('pose-prototype.html', '_blank');
         }
 
         // Cargar modelos al cargar la página
