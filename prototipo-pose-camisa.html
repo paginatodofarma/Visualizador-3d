@@ -207,32 +207,57 @@
 
         // Inicializar MediaPipe Pose
         function initPose() {
-            pose = new Pose({
-                locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
+            try {
+                // Evitar inicialización múltiple
+                if (pose) {
+                    console.log('MediaPipe ya inicializado');
+                    return;
                 }
-            });
 
-            pose.setOptions({
-                modelComplexity: 1,
-                smoothLandmarks: true,
-                enableSegmentation: false,
-                smoothSegmentation: false,
-                minDetectionConfidence: 0.3, // Reducido para mejor detección
-                minTrackingConfidence: 0.3   // Reducido para mejor tracking
-            });
-
-            pose.onResults(onResults);
-
-            camera = new Camera(document.getElementById('video'), {
-                onFrame: async () => {
-                    if (isDetecting) {
-                        await pose.send({ image: document.getElementById('video') });
+                console.log('Inicializando MediaPipe Pose...');
+                pose = new Pose({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
                     }
-                },
-                width: 640,
-                height: 480
-            });
+                });
+
+                pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    enableSegmentation: false,
+                    smoothSegmentation: false,
+                    minDetectionConfidence: 0.3, // Reducido para mejor detección
+                    minTrackingConfidence: 0.3   // Reducido para mejor tracking
+                });
+
+                pose.onResults(onResults);
+
+                // Inicializar cámara después de que pose esté listo
+                pose.initialize().then(() => {
+                    console.log('MediaPipe Pose inicializado correctamente');
+                    camera = new Camera(document.getElementById('video'), {
+                        onFrame: async () => {
+                            if (isDetecting && pose) {
+                                try {
+                                    await pose.send({ image: document.getElementById('video') });
+                                } catch (error) {
+                                    console.error('Error enviando frame a MediaPipe:', error);
+                                    // No detener detección por errores temporales
+                                }
+                            }
+                        },
+                        width: 640,
+                        height: 480
+                    });
+                }).catch((error) => {
+                    console.error('Error inicializando MediaPipe:', error);
+                    document.getElementById('status').textContent = 'Error inicializando MediaPipe: ' + error.message;
+                });
+
+            } catch (error) {
+                console.error('Error en initPose:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+            }
         }
 
         let detectionStatus = false;
@@ -344,12 +369,31 @@
 
         // Funciones de control
         function togglePoseDetection() {
-            isDetecting = !isDetecting;
-            document.getElementById('status').textContent = isDetecting ? 'Estado: Detectando pose...' : 'Estado: Detección detenida';
-            if (isDetecting) {
-                camera.start();
-            } else {
-                camera.stop();
+            try {
+                if (!pose) {
+                    document.getElementById('status').textContent = 'Error: MediaPipe no inicializado';
+                    return;
+                }
+
+                isDetecting = !isDetecting;
+                document.getElementById('status').textContent = isDetecting ? 'Estado: Detectando pose...' : 'Estado: Detección detenida';
+
+                if (isDetecting) {
+                    if (camera) {
+                        camera.start();
+                    } else {
+                        document.getElementById('status').textContent = 'Error: Cámara no disponible';
+                        isDetecting = false;
+                    }
+                } else {
+                    if (camera) {
+                        camera.stop();
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cambiar detección:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+                isDetecting = false;
             }
         }
 
@@ -373,19 +417,30 @@
         }
 
         function resetDetection() {
-            if (camera) {
-                camera.stop();
+            try {
+                // Detener la detección actual
+                isDetecting = false;
+                detectionStatus = false;
+
+                // Detener la cámara si está activa
+                if (camera) {
+                    camera.stop();
+                }
+
+                // Resetear la posición de la camisa
+                if (shirtMesh) {
+                    shirtMesh.position.set(0, 0, 0);
+                    shirtMesh.rotation.set(0, 0, 0);
+                    shirtMesh.scale.set(1, 1, 1);
+                }
+
+                // No cerrar pose completamente, solo resetear estado
+                document.getElementById('status').textContent = 'Estado: Reiniciado. Haz clic en "Iniciar Detección"';
+                console.log('Detección reiniciada');
+            } catch (error) {
+                console.error('Error al reiniciar:', error);
+                document.getElementById('status').textContent = 'Error al reiniciar: ' + error.message;
             }
-            if (pose) {
-                pose.close();
-            }
-            isDetecting = false;
-            detectionStatus = false;
-            document.getElementById('status').textContent = 'Estado: Reiniciando...';
-            setTimeout(() => {
-                initPose();
-                document.getElementById('status').textContent = 'Estado: Listo para iniciar detección';
-            }, 1000);
         }
 
         // Inicializar todo

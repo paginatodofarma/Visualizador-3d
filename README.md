@@ -71,10 +71,12 @@ Este proyecto incluye un prototipo experimental (`prototipo-pose-camisa.html`) q
 ### Mejoras recientes (v1.1):
 - **Manejo robusto de errores:** Verificación de WebGL, null checks para camera3d/renderer, try-catch en funciones críticas.
 - **Compatibilidad mejorada:** Detección automática de soporte WebGL, mensajes de error informativos.
-- **Función de reinicio:** Botón para reiniciar la detección de pose y resetear posiciones.
+- **Función de reinicio mejorada:** Reseteo de estado sin destruir MediaPipe (evita errores WASM).
 - **Umbrales de detección reducidos:** De 0.5 a 0.3 para mejor detección en condiciones variables.
-- **Indicadores visuales:** Estado de detección en tiempo real, logging mejorado para debugging.
-- **Manejo de resize mejorado:** Verificación de objetos antes de actualizar.
+- **Inicialización asíncrona:** MediaPipe se inicializa correctamente con promesas para evitar conflictos.
+- **Manejo de errores en frames:** Errores temporales no detienen la detección completa.
+- **Indicadores visuales mejorados:** Estado de detección en tiempo real, logging mejorado para debugging.
+- **Prevención de reinicializaciones múltiples:** Verificación para evitar inicializar MediaPipe varias veces.
 
 ### Requisitos del navegador:
 - **WebGL:** Requerido para renderizado 3D (soporte en Chrome 51+, Firefox 45+, Safari 10+).
@@ -84,5 +86,7 @@ Este proyecto incluye un prototipo experimental (`prototipo-pose-camisa.html`) q
 ### Solución de problemas:
 - **"WebGL no soportado":** Actualiza tu navegador o usa uno compatible.
 - **"Canvas 3D no encontrado":** Asegúrate de que el archivo se carga completamente.
+- **Errores WASM/MediaPipe:** Evitados con inicialización asíncrona y reseteo mejorado.
 - **Detección fallida:** Mejora la iluminación, reduce el umbral o reinicia la detección.
 - **Errores de redimensionamiento:** Evitados con verificaciones robustas.
+- **Múltiples contextos WebGL:** Resueltos evitando reinicializaciones de MediaPipe.
