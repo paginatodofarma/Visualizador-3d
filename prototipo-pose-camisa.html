@@ -195,24 +195,28 @@
             const torsoGeometry = new THREE.PlaneGeometry(1, 1.2);
             const torso = new THREE.Mesh(torsoGeometry, shirtMaterial);
             torso.position.z = 0.01; // Delante del cuerpo
+            torso.name = 'torso';
             shirtMesh.add(torso);
 
             // Manga izquierda
             const sleeveLeftGeometry = new THREE.PlaneGeometry(0.3, 0.6);
             const sleeveLeft = new THREE.Mesh(sleeveLeftGeometry, shirtMaterial);
             sleeveLeft.position.set(-0.5, 0.2, 0.01);
+            sleeveLeft.name = 'sleeveLeft';
             shirtMesh.add(sleeveLeft);
 
             // Manga derecha
             const sleeveRightGeometry = new THREE.PlaneGeometry(0.3, 0.6);
             const sleeveRight = new THREE.Mesh(sleeveRightGeometry, shirtMaterial);
             sleeveRight.position.set(0.5, 0.2, 0.01);
+            sleeveRight.name = 'sleeveRight';
             shirtMesh.add(sleeveRight);
 
             // Cuello (óvalo simple)
             const neckGeometry = new THREE.CircleGeometry(0.15, 8);
             const neck = new THREE.Mesh(neckGeometry, shirtMaterial);
             neck.position.set(0, 0.5, 0.01);
+            neck.name = 'neck';
             shirtMesh.add(neck);
 
             shirtMesh.visible = showShirt;
@@ -364,7 +368,13 @@
         function updateShirtPosition(landmarks) {
             if (!shirtMesh || !showShirt) return;
 
-            // Landmarks clave para alineación
+            // Obtener referencias a las partes de la camisa por nombre
+            const torso = shirtMesh.getObjectByName('torso');
+            const sleeveLeft = shirtMesh.getObjectByName('sleeveLeft');
+            const sleeveRight = shirtMesh.getObjectByName('sleeveRight');
+            const neck = shirtMesh.getObjectByName('neck');
+
+            // Landmarks clave
             const nose = landmarks[0];
             const leftShoulder = landmarks[11];
             const rightShoulder = landmarks[12];
@@ -372,78 +382,68 @@
             const rightElbow = landmarks[14];
             const leftHip = landmarks[23];
             const rightHip = landmarks[24];
-            const leftKnee = landmarks[25];
-            const rightKnee = landmarks[26];
 
             if (leftShoulder && rightShoulder && leftHip && rightHip) {
-                // Calcular dimensiones del torso
+                // Calcular centros y dimensiones
                 const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
                 const shoulderCenterY = (leftShoulder.y + rightShoulder.y) / 2;
                 const hipCenterX = (leftHip.x + rightHip.x) / 2;
                 const hipCenterY = (leftHip.y + rightHip.y) / 2;
-
-                // Ancho de hombros
-                const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x);
-                // Alto del torso (hombros a caderas)
-                const torsoHeight = Math.abs(shoulderCenterY - hipCenterY);
-                // Ancho de caderas
-                const hipWidth = Math.abs(rightHip.x - leftHip.x);
-
-                // Centro del torso
                 const torsoCenterX = (shoulderCenterX + hipCenterX) / 2;
                 const torsoCenterY = (shoulderCenterY + hipCenterY) / 2;
 
-                // Profundidad Z promedio
+                const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x);
+                const torsoHeight = Math.abs(shoulderCenterY - hipCenterY);
                 const avgZ = (leftShoulder.z + rightShoulder.z + leftHip.z + rightHip.z) / 4;
 
-                // Escalar la camisa con anchura/altura del torso y profundidad
-                const baseScaleX = shoulderWidth * 2.0;
-                const baseScaleY = torsoHeight * 1.8; // Reducido para evitar superposición en la cara
-                const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2); // más estable
-                shirtMesh.scale.set(baseScaleX * depthFactor, baseScaleY * depthFactor, 1);
+                // Profundidad y escala global
+                const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2);
+                const globalScaleX = shoulderWidth * 2.0 * depthFactor;
+                const globalScaleY = torsoHeight * 1.8 * depthFactor;
 
-                // Posicionar la camisa en el marco de la cámara
-                // map normalizado [0,1] → alrededor de [-1,1]
+                // Posición global de la camisa (centro del torso)
                 const targetX = (torsoCenterX - 0.5) * 2.0;
                 const targetY = -(torsoCenterY - 0.5) * 2.0;
-                shirtMesh.position.x = targetX;
-                shirtMesh.position.y = targetY;
+                shirtMesh.position.set(targetX, targetY, THREE.MathUtils.clamp(1.0 - (avgZ * 2.0), -0.5, 1.5));
 
-                // Ajuste de profundidad para que la camisa se mueva con presencia
-                shirtMesh.position.z = THREE.MathUtils.clamp(1.0 - (avgZ * 2.0), -0.5, 1.5);
-
-                // Calcular rotación basada en hombros
+                // Rotación del torso
                 const shoulderAngle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
-                shirtMesh.rotation.z = shoulderAngle;
-
-                // Ajustar inclinación basada en caderas
                 const hipAngle = Math.atan2(rightHip.y - leftHip.y, rightHip.x - leftHip.x);
-                const torsoTilt = (shoulderAngle + hipAngle) / 2;
-                shirtMesh.rotation.z = torsoTilt;
+                shirtMesh.rotation.z = (shoulderAngle + hipAngle) / 2;
 
-                // Ajustar posición Y para que el cuello esté en el nivel correcto
+                // Ajuste de posición Y basado en nariz para evitar superposición
                 if (nose) {
-                    const neckOffset = (nose.y - shoulderCenterY) * 1.0; // Reducido multiplicador
-                    shirtMesh.position.y -= neckOffset; // Cambiado para bajar la camisa si la nariz está arriba
+                    const neckOffset = (nose.y - shoulderCenterY) * 1.0;
+                    shirtMesh.position.y -= neckOffset;
                 }
 
-                // Nota: el ajuste de escala en profundidad ya se aplica arriba.
-                // Se evita redeclarar `depthFactor` para prevenir errores de sintaxis.
+                // Actualizar torso
+                if (torso) {
+                    torso.scale.set(globalScaleX, globalScaleY, 1);
+                    torso.position.set(0, 0, 0.01); // Relativo al grupo
+                }
 
-                // Ajustar mangas basado en codos
-                if (shirtMesh.children.length >= 3) {
-                    const leftSleeve = shirtMesh.children[1]; // Manga izquierda
-                    const rightSleeve = shirtMesh.children[2]; // Manga derecha
+                // Actualizar cuello
+                if (neck && nose) {
+                    const neckX = (nose.x - torsoCenterX) * globalScaleX;
+                    const neckY = (nose.y - torsoCenterY) * globalScaleY;
+                    neck.position.set(neckX, neckY + 0.1, 0.01); // Un poco arriba
+                    neck.scale.set(1, 1, 1); // Escala fija o ajustar
+                }
 
-                    if (leftElbow) {
-                        leftSleeve.position.x = (leftElbow.x - torsoCenterX) * shirtMesh.scale.x;
-                        leftSleeve.position.y = (leftElbow.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
-                    }
+                // Actualizar mangas
+                if (sleeveLeft && leftElbow) {
+                    const sleeveX = (leftElbow.x - torsoCenterX) * globalScaleX;
+                    const sleeveY = (leftElbow.y - torsoCenterY) * globalScaleY;
+                    sleeveLeft.position.set(sleeveX, sleeveY, 0.01);
+                    sleeveLeft.scale.set(1, 1, 1); // Escala fija
+                }
 
-                    if (rightElbow) {
-                        rightSleeve.position.x = (rightElbow.x - torsoCenterX) * shirtMesh.scale.x;
-                        rightSleeve.position.y = (rightElbow.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
-                    }
+                if (sleeveRight && rightElbow) {
+                    const sleeveX = (rightElbow.x - torsoCenterX) * globalScaleX;
+                    const sleeveY = (rightElbow.y - torsoCenterY) * globalScaleY;
+                    sleeveRight.position.set(sleeveX, sleeveY, 0.01);
+                    sleeveRight.scale.set(1, 1, 1);
                 }
             }
         }
