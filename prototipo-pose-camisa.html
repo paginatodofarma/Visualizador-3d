@@ -158,36 +158,36 @@
                 <summary>Calibración de Partes</summary>
                 <div id="calibration">
                     <h4>Torso</h4>
-                    <label>X: <input type="range" id="torsoX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'x', this.value)"></label>
-                    <label>Y: <input type="range" id="torsoY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'y', this.value)"></label>
-                    <label>Z: <input type="range" id="torsoZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'z', this.value)"></label>
-                    <label>Rot: <input type="range" id="torsoRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('torso', 'rot', this.value)"></label>
-                    <label>ScaleX: <input type="range" id="torsoScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleX', this.value)"></label>
-                    <label>ScaleY: <input type="range" id="torsoScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleY', this.value)"></label>
+                    <label>X: <input type="range" id="torsoX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'x', this.value)"> <input type="number" id="torsoXNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="torsoY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'y', this.value)"> <input type="number" id="torsoYNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="torsoZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'z', this.value)"> <input type="number" id="torsoZNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="torsoRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('torso', 'rot', this.value)"> <input type="number" id="torsoRotNum" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('torso', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="torsoScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleX', this.value)"> <input type="number" id="torsoScaleXNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="torsoScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleY', this.value)"> <input type="number" id="torsoScaleYNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleY', this.value)"></label>
 
                     <h4>Manga Izquierda</h4>
-                    <label>X: <input type="range" id="sleeveLeftX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'x', this.value)"></label>
-                    <label>Y: <input type="range" id="sleeveLeftY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'y', this.value)"></label>
-                    <label>Z: <input type="range" id="sleeveLeftZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'z', this.value)"></label>
-                    <label>Rot: <input type="range" id="sleeveLeftRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'rot', this.value)"></label>
-                    <label>ScaleX: <input type="range" id="sleeveLeftScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleX', this.value)"></label>
-                    <label>ScaleY: <input type="range" id="sleeveLeftScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleY', this.value)"></label>
+                    <label>X: <input type="range" id="sleeveLeftX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'x', this.value)"> <input type="number" id="sleeveLeftXNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="sleeveLeftY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'y', this.value)"> <input type="number" id="sleeveLeftYNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="sleeveLeftZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'z', this.value)"> <input type="number" id="sleeveLeftZNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="sleeveLeftRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'rot', this.value)"> <input type="number" id="sleeveLeftRotNum" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="sleeveLeftScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleX', this.value)"> <input type="number" id="sleeveLeftScaleXNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="sleeveLeftScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleY', this.value)"> <input type="number" id="sleeveLeftScaleYNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleY', this.value)"></label>
 
                     <h4>Manga Derecha</h4>
-                    <label>X: <input type="range" id="sleeveRightX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'x', this.value)"></label>
-                    <label>Y: <input type="range" id="sleeveRightY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'y', this.value)"></label>
-                    <label>Z: <input type="range" id="sleeveRightZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'z', this.value)"></label>
-                    <label>Rot: <input type="range" id="sleeveRightRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'rot', this.value)"></label>
-                    <label>ScaleX: <input type="range" id="sleeveRightScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleX', this.value)"></label>
-                    <label>ScaleY: <input type="range" id="sleeveRightScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleY', this.value)"></label>
+                    <label>X: <input type="range" id="sleeveRightX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'x', this.value)"> <input type="number" id="sleeveRightXNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="sleeveRightY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'y', this.value)"> <input type="number" id="sleeveRightYNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="sleeveRightZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'z', this.value)"> <input type="number" id="sleeveRightZNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="sleeveRightRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'rot', this.value)"> <input type="number" id="sleeveRightRotNum" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="sleeveRightScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleX', this.value)"> <input type="number" id="sleeveRightScaleXNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="sleeveRightScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleY', this.value)"> <input type="number" id="sleeveRightScaleYNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleY', this.value)"></label>
 
                     <h4>Cuello</h4>
-                    <label>X: <input type="range" id="neckX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'x', this.value)"></label>
-                    <label>Y: <input type="range" id="neckY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'y', this.value)"></label>
-                    <label>Z: <input type="range" id="neckZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'z', this.value)"></label>
-                    <label>Rot: <input type="range" id="neckRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('neck', 'rot', this.value)"></label>
-                    <label>ScaleX: <input type="range" id="neckScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleX', this.value)"></label>
-                    <label>ScaleY: <input type="range" id="neckScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleY', this.value)"></label>
+                    <label>X: <input type="range" id="neckX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'x', this.value)"> <input type="number" id="neckXNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="neckY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'y', this.value)"> <input type="number" id="neckYNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="neckZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'z', this.value)"> <input type="number" id="neckZNum" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="neckRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('neck', 'rot', this.value)"> <input type="number" id="neckRotNum" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('neck', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="neckScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleX', this.value)"> <input type="number" id="neckScaleXNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="neckScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleY', this.value)"> <input type="number" id="neckScaleYNum" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleY', this.value)"></label>
 
                     <h4>Calibración de esqueleto (X, Y offset)</h4>
                     <div id="skeletonCalibrationControls">
@@ -698,6 +698,10 @@
 
         function updateCalibration(part, prop, value) {
             calibration[part][prop] = parseFloat(value);
+            // Sincronizar el input numérico correspondiente
+            const numInputId = part + prop.charAt(0).toUpperCase() + prop.slice(1) + 'Num';
+            const numInput = document.getElementById(numInputId);
+            if (numInput) numInput.value = value;
             // Actualizar en tiempo real si hay landmarks
             if (currentLandmarks) {
                 updateShirtPosition(currentLandmarks);
