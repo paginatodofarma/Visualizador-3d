@@ -1,4 +1,4 @@
-let scene, camera, renderer, model;
+let scene, camera, renderer, model, controls;
 
 // Inicializar la escena
 function init() {
@@ -8,6 +8,10 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.xr.enabled = true; // Habilitar WebXR para AR
     document.getElementById('viewer').appendChild(renderer.domElement);
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
 
     // Luz
     const light = new THREE.AmbientLight(0xffffff, 0.5);
@@ -47,20 +51,33 @@ function init() {
 }
 
 function loadModel(modelName) {
+    console.log('Loading model:', modelName);
     if (model) {
         scene.remove(model);
     }
     const loader = new THREE.GLTFLoader();
     loader.load(`Modelos/${modelName}`, (gltf) => {
+        console.log('Model loaded successfully');
         model = gltf.scene;
+        // Centrar y escalar el modelo
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 5 / maxDim;
+        model.scale.setScalar(scale);
         scene.add(model);
-    }, undefined, (error) => {
+    }, (progress) => {
+        console.log('Loading progress:', progress);
+    }, (error) => {
         console.error('Error loading model:', error);
     });
 }
 
 function animate() {
     renderer.setAnimationLoop(() => {
+        controls.update();
         renderer.render(scene, camera);
     });
 }
