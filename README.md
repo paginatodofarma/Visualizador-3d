@@ -16,6 +16,15 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 3. En la sección "Pages", selecciona la rama `main` y la carpeta raíz (`/`).
 4. Guarda los cambios. GitHub Pages generará la URL de tu sitio.
 
+## Configuración del Listado Automático
+
+Edita `index.html` y reemplaza los valores en el script:
+- `const owner = 'tuusuario';` con tu nombre de usuario de GitHub.
+- `const repo = 'tunombre-repo';` con el nombre de tu repositorio.
+- `const branch = 'main';` si usas otra rama (por defecto 'main').
+
+El listado se actualizará automáticamente al cargar la página, obteniendo los archivos .glb de la carpeta `Modelos/` vía la API de GitHub.
+
 ## Estructura del Proyecto
 
 - `index.html`: Página principal con el visualizador.

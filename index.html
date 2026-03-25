@@ -51,7 +51,6 @@
     <div class="viewer-container">
         <model-viewer
             id="modelViewer"
-            src="Modelos/prueba.glb"
             alt="Modelo 3D"
             ar
             ar-modes="webxr scene-viewer quick-look"
@@ -70,13 +69,53 @@
     </div>
 
     <script>
+        // Configura tu usuario y repositorio de GitHub aquí
+        const owner = 'tuusuario'; // Reemplaza con tu nombre de usuario de GitHub
+        const repo = 'tunombre-repo'; // Reemplaza con el nombre de tu repositorio
+        const branch = 'main'; // Rama principal, usualmente 'main' o 'master'
+
+        async function loadModels() {
+            const modelList = document.getElementById('modelList');
+            modelList.innerHTML = '<li>Cargando modelos...</li>';
+
+            try {
+                const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/Modelos?ref=${branch}`);
+                if (!response.ok) {
+                    throw new Error('Error al obtener la lista de modelos');
+                }
+                const files = await response.json();
+                const glbFiles = files.filter(file => file.type === 'file' && file.name.endsWith('.glb'));
+
+                if (glbFiles.length === 0) {
+                    modelList.innerHTML = '<li>No se encontraron archivos .glb</li>';
+                    return;
+                }
+
+                modelList.innerHTML = '';
+                glbFiles.forEach(file => {
+                    const li = document.createElement('li');
+                    li.textContent = file.name;
+                    li.onclick = () => loadModel(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/Modelos/${file.name}`);
+                    modelList.appendChild(li);
+                });
+
+                // Cargar el primer modelo por defecto
+                if (glbFiles.length > 0) {
+                    loadModel(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/Modelos/${glbFiles[0].name}`);
+                }
+            } catch (error) {
+                console.error(error);
+                modelList.innerHTML = '<li>Error al cargar modelos. Verifica la configuración.</li>';
+            }
+        }
+
         function loadModel(src) {
             const viewer = document.getElementById('modelViewer');
             viewer.src = src;
         }
 
-        // Función para cargar modelos dinámicamente si es necesario
-        // Por ahora, hardcodeados
+        // Cargar modelos al cargar la página
+        window.onload = loadModels;
     </script>
 </body>
 </html>
