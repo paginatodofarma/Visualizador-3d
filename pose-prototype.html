@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototipo Pose Landmarker - MediaPipe</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,25 +22,15 @@
             border: 2px solid #333;
             max-width: 100%;
             height: auto;
+            position: relative;
         }
-        #threeCanvas {
-            border: 2px solid #333;
-            margin-top: 20px;
-        }
-        .controls {
-            margin-top: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            margin: 0 10px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #0056b3;
+        #threejs-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
         .status {
             margin-top: 20px;
@@ -53,14 +42,13 @@
 <body>
     <h1>Prototipo de Detección de Pose con MediaPipe</h1>
     <p>Esta página detecta poses corporales en tiempo real y muestra el esqueleto.</p>
+    <button class="share-button" id="toggleSkeletonButton" onclick="toggleSkeleton()" style="background: #ff9800;">Ocultar esqueleto</button>
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas"></canvas>
-    <canvas id="threeCanvas" width="640" height="480"></canvas>
-    <div class="controls">
-        <button id="toggleSkeleton">Ocultar Esqueleto</button>
-    </div>
+    <div id="threejs-container"></div>
     <div class="status" id="status">Cargando...</div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
@@ -70,78 +58,92 @@
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const statusElement = document.getElementById('status');
-        const toggleButton = document.getElementById('toggleSkeleton');
+        const toggleSkeletonButton = document.getElementById('toggleSkeletonButton');
+        const threejsContainer = document.getElementById('threejs-container');
 
         let pose;
-        let showSkeleton = true;
-        let scene, camera, renderer, cube;
-
-        // Toggle skeleton
-        toggleButton.addEventListener('click', () => {
-            showSkeleton = !showSkeleton;
-            toggleButton.textContent = showSkeleton ? 'Ocultar Esqueleto' : 'Mostrar Esqueleto';
-        });
+        let drawSkeleton = true;
 
         // Three.js setup
+        let scene, camera, renderer;
+        let torso, leftArm, rightArm, leftLeg, rightLeg;
+        let joints = {};
+        let bones = [];
+
         function initThreeJS() {
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(75, 640 / 480, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threeCanvas') });
-            renderer.setSize(640, 480);
+            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+            camera.position.z = 1;
 
-            const geometry = new THREE.BoxGeometry(0.5, 2, 0.5); // Prisma vertical delgado
-            const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
-            cube = new THREE.Mesh(geometry, material);
-            scene.add(cube);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setSize(canvasElement.width, canvasElement.height);
+            threejsContainer.appendChild(renderer.domElement);
 
-            // Agregar luz
-            const light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(1, 1, 1).normalize();
-            scene.add(light);
+            // Materiales semi-transparentes
+            const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.45 });
 
-            camera.position.z = 5;
+            // Torso (plano)
+            const torsoGeometry = new THREE.PlaneGeometry(0.2, 0.3);
+            torso = new THREE.Mesh(torsoGeometry, material.clone());
+            torso.material.color.setHex(0x00ff00);
+            scene.add(torso);
 
-            animate();
+            // Brazos (cilindros)
+            const armGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
+            leftArm = new THREE.Mesh(armGeometry, material.clone());
+            leftArm.material.color.setHex(0x0000ff);
+            scene.add(leftArm);
+
+            rightArm = new THREE.Mesh(armGeometry, material.clone());
+            rightArm.material.color.setHex(0x0000ff);
+            scene.add(rightArm);
+
+            // Piernas (cilindros)
+            const legGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 8);
+            leftLeg = new THREE.Mesh(legGeometry, material.clone());
+            leftLeg.material.color.setHex(0xff00ff);
+            scene.add(leftLeg);
+
+            rightLeg = new THREE.Mesh(legGeometry, material.clone());
+            rightLeg.material.color.setHex(0xff00ff);
+            scene.add(rightLeg);
+
+            // Joints del esqueleto (esferas pequeñas)
+            const jointNames = ['leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'];
+            const jointGeo = new THREE.SphereGeometry(0.012, 8, 8);
+            const jointMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            jointNames.forEach(name => {
+                const m = new THREE.Mesh(jointGeo, jointMat.clone());
+                m.visible = false;
+                scene.add(m);
+                joints[name] = m;
+            });
+
+            // Bones (líneas) para conectar joints
+            const bonePairs = [
+                ['leftShoulder','rightShoulder'],
+                ['leftHip','rightHip'],
+                ['leftShoulder','leftElbow'],
+                ['leftElbow','leftWrist'],
+                ['rightShoulder','rightElbow'],
+                ['rightElbow','rightWrist'],
+                ['leftHip','leftKnee'],
+                ['leftKnee','leftAnkle'],
+                ['rightHip','rightKnee'],
+                ['rightKnee','rightAnkle']
+            ];
+
+            bonePairs.forEach(pair => {
+                const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+                const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2 }));
+                scene.add(line);
+                bones.push({ from: pair[0], to: pair[1], line });
+            });
         }
 
-        function animate() {
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-        }
-
-        function calculateTorsoRotation(landmarks) {
-            const leftShoulder = landmarks[11];
-            const rightShoulder = landmarks[12];
-            const leftHip = landmarks[23];
-            const rightHip = landmarks[24];
-
-            // Centro de hombros
-            const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
-            const shoulderCenterY = (leftShoulder.y + rightShoulder.y) / 2;
-
-            // Centro de caderas
-            const hipCenterX = (leftHip.x + rightHip.x) / 2;
-            const hipCenterY = (leftHip.y + rightHip.y) / 2;
-
-            // Vector del torso (de caderas a hombros)
-            const torsoVectorX = shoulderCenterX - hipCenterX;
-            const torsoVectorY = shoulderCenterY - hipCenterY;
-
-            // Longitud del vector
-            const length = Math.sqrt(torsoVectorX ** 2 + torsoVectorY ** 2);
-
-            // Rotación X (pitch): inclinación adelante-atrás
-            const angleX = Math.asin(torsoVectorX / length) * 2; // Exagerar para visibilidad
-
-            // Rotación Y (yaw): giro izquierda-derecha
-            const angleY = Math.atan2(torsoVectorX, -torsoVectorY);
-
-            // Rotación Z (roll): usar diferencia de hombros
-            const shoulderVectorX = rightShoulder.x - leftShoulder.x;
-            const shoulderVectorY = rightShoulder.y - leftShoulder.y;
-            const angleZ = Math.atan2(shoulderVectorY, shoulderVectorX) * 0.5; // Suave
-
-            return { x: angleX, y: angleY, z: angleZ };
+        function toggleSkeleton() {
+            drawSkeleton = !drawSkeleton;
+            toggleSkeletonButton.textContent = drawSkeleton ? 'Ocultar esqueleto' : 'Mostrar esqueleto';
         }
 
         async function onResults(results) {
@@ -150,24 +152,151 @@
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks) {
-                statusElement.textContent = 'Cuerpo detectado - Mostrando esqueleto';
-                if (showSkeleton) {
+                statusElement.textContent = drawSkeleton ? 'Cuerpo detectado - Mostrando esqueleto' : 'Cuerpo detectado - Esqueleto oculto';
+                if (drawSkeleton) {
                     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
                     drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
                 }
 
-                // Rotar el cubo basado en el torso
-                const rotation = calculateTorsoRotation(results.poseLandmarks);
-                cube.rotation.x = rotation.x;
-                cube.rotation.y = rotation.y;
-                cube.rotation.z = rotation.z;
+                // Actualizar objetos 3D
+                updateClothing(results.poseLandmarks);
+                renderer.render(scene, camera);
             } else {
                 statusElement.textContent = 'No se detecta cuerpo - Asegúrate de estar frente a la cámara';
             }
             canvasCtx.restore();
         }
 
+        function updateClothing(landmarks) {
+            // Función para convertir coordenadas normalizadas a Three.js (-1 a 1)
+            function toThreeJS(x, y) {
+                return {
+                    x: (x - 0.5) * 2,
+                    y: -(y - 0.5) * 2
+                };
+            }
+
+            // Llenado de joints y visibilidad
+            const mapped = {
+                leftShoulder: toThreeJS(landmarks[11].x, landmarks[11].y),
+                rightShoulder: toThreeJS(landmarks[12].x, landmarks[12].y),
+                leftElbow: toThreeJS(landmarks[13].x, landmarks[13].y),
+                rightElbow: toThreeJS(landmarks[14].x, landmarks[14].y),
+                leftWrist: toThreeJS(landmarks[15].x, landmarks[15].y),
+                rightWrist: toThreeJS(landmarks[16].x, landmarks[16].y),
+                leftHip: toThreeJS(landmarks[23].x, landmarks[23].y),
+                rightHip: toThreeJS(landmarks[24].x, landmarks[24].y),
+                leftKnee: toThreeJS(landmarks[25].x, landmarks[25].y),
+                rightKnee: toThreeJS(landmarks[26].x, landmarks[26].y),
+                leftAnkle: toThreeJS(landmarks[27].x, landmarks[27].y),
+                rightAnkle: toThreeJS(landmarks[28].x, landmarks[28].y)
+            };
+
+            Object.keys(mapped).forEach(key => {
+                const p = mapped[key];
+                joints[key].position.set(p.x, p.y, 0.03);
+                joints[key].visible = true;
+            });
+
+            // Actualizar líneas del skeleton en Three.js
+            bones.forEach(b => {
+                const p1 = joints[b.from].position;
+                const p2 = joints[b.to].position;
+                b.line.geometry.setFromPoints([p1, p2]);
+                b.line.geometry.attributes.position.needsUpdate = true;
+            });
+
+            // Torso: convergencia de hombros y caderas
+            const torsoX = (mapped.leftShoulder.x + mapped.rightShoulder.x + mapped.leftHip.x + mapped.rightHip.x) / 4;
+            const torsoY = (mapped.leftShoulder.y + mapped.rightShoulder.y + mapped.leftHip.y + mapped.rightHip.y) / 4;
+            const torsoWidth = Math.max(0.3, Math.abs(mapped.rightShoulder.x - mapped.leftShoulder.x) * 1.2);
+            const torsoHeight = Math.max(0.35, Math.abs(mapped.leftHip.y - mapped.leftShoulder.y) * 1.2);
+            torso.position.set(torsoX, torsoY, 0.01);
+            torso.scale.set(torsoWidth / 0.2, torsoHeight / 0.3, 1);
+
+            // Brazo izquierdo
+            const la = mapped.leftShoulder;
+            const lw = mapped.leftWrist;
+            const leftArmLength = Math.sqrt((lw.x - la.x) ** 2 + (lw.y - la.y) ** 2);
+            leftArm.scale.set(1, Math.max(leftArmLength / 0.2, 0.1), 1);
+            leftArm.position.set((la.x + lw.x) / 2, (la.y + lw.y) / 2, 0.015);
+            leftArm.rotation.z = Math.atan2(lw.y - la.y, lw.x - la.x) - Math.PI / 2;
+
+            // Brazo derecho
+            const ra = mapped.rightShoulder;
+            const rw = mapped.rightWrist;
+            const rightArmLength = Math.sqrt((rw.x - ra.x) ** 2 + (rw.y - ra.y) ** 2);
+            rightArm.scale.set(1, Math.max(rightArmLength / 0.2, 0.1), 1);
+            rightArm.position.set((ra.x + rw.x) / 2, (ra.y + rw.y) / 2, 0.015);
+            rightArm.rotation.z = Math.atan2(rw.y - ra.y, rw.x - ra.x) - Math.PI / 2;
+
+            // Pierna izquierda
+            const lh = mapped.leftHip;
+            const la2 = mapped.leftAnkle;
+            const leftLegLength = Math.sqrt((la2.x - lh.x) ** 2 + (la2.y - lh.y) ** 2);
+            leftLeg.scale.set(1, Math.max(leftLegLength / 0.3, 0.1), 1);
+            leftLeg.position.set((lh.x + la2.x) / 2, (lh.y + la2.y) / 2, 0.015);
+            leftLeg.rotation.z = Math.atan2(la2.y - lh.y, la2.x - lh.x) - Math.PI / 2;
+
+            // Pierna derecha
+            const rh = mapped.rightHip;
+            const ra2 = mapped.rightAnkle;
+            const rightLegLength = Math.sqrt((ra2.x - rh.x) ** 2 + (ra2.y - rh.y) ** 2);
+            rightLeg.scale.set(1, Math.max(rightLegLength / 0.3, 0.1), 1);
+            rightLeg.position.set((rh.x + ra2.x) / 2, (rh.y + ra2.y) / 2, 0.015);
+            rightLeg.rotation.z = Math.atan2(ra2.y - rh.y, ra2.x - rh.x) - Math.PI / 2;
+        }
+
+            // Torso: entre hombros y caderas
+            const leftShoulder = toThreeJS(landmarks[11].x, landmarks[11].y);
+            const rightShoulder = toThreeJS(landmarks[12].x, landmarks[12].y);
+            const leftHip = toThreeJS(landmarks[23].x, landmarks[23].y);
+            const rightHip = toThreeJS(landmarks[24].x, landmarks[24].y);
+
+            const torsoX = (leftShoulder.x + rightShoulder.x + leftHip.x + rightHip.x) / 4;
+            const torsoY = (leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4;
+            torso.position.set(torsoX, torsoY, 0);
+
+            // Brazos
+            const leftElbow = toThreeJS(landmarks[13].x, landmarks[13].y);
+            const rightElbow = toThreeJS(landmarks[14].x, landmarks[14].y);
+            const leftWrist = toThreeJS(landmarks[15].x, landmarks[15].y);
+            const rightWrist = toThreeJS(landmarks[16].x, landmarks[16].y);
+
+            // Brazo izquierdo: hombro a muñeca
+            const leftArmLength = Math.sqrt((leftWrist.x - leftShoulder.x)**2 + (leftWrist.y - leftShoulder.y)**2);
+            leftArm.scale.y = leftArmLength / 0.2; // Escalar longitud
+            leftArm.position.set((leftShoulder.x + leftWrist.x)/2, (leftShoulder.y + leftWrist.y)/2, 0);
+            leftArm.rotation.z = Math.atan2(leftWrist.y - leftShoulder.y, leftWrist.x - leftShoulder.x) - Math.PI/2;
+
+            // Brazo derecho
+            const rightArmLength = Math.sqrt((rightWrist.x - rightShoulder.x)**2 + (rightWrist.y - rightShoulder.y)**2);
+            rightArm.scale.y = rightArmLength / 0.2;
+            rightArm.position.set((rightShoulder.x + rightWrist.x)/2, (rightShoulder.y + rightWrist.y)/2, 0);
+            rightArm.rotation.z = Math.atan2(rightWrist.y - rightShoulder.y, rightWrist.x - rightShoulder.x) - Math.PI/2;
+
+            // Piernas
+            const leftKnee = toThreeJS(landmarks[25].x, landmarks[25].y);
+            const rightKnee = toThreeJS(landmarks[26].x, landmarks[26].y);
+            const leftAnkle = toThreeJS(landmarks[27].x, landmarks[27].y);
+            const rightAnkle = toThreeJS(landmarks[28].x, landmarks[28].y);
+
+            // Pierna izquierda: cadera a tobillo
+            const leftLegLength = Math.sqrt((leftAnkle.x - leftHip.x)**2 + (leftAnkle.y - leftHip.y)**2);
+            leftLeg.scale.y = leftLegLength / 0.3;
+            leftLeg.position.set((leftHip.x + leftAnkle.x)/2, (leftHip.y + leftAnkle.y)/2, 0);
+            leftLeg.rotation.z = Math.atan2(leftAnkle.y - leftHip.y, leftAnkle.x - leftHip.x) - Math.PI/2;
+
+            // Pierna derecha
+            const rightLegLength = Math.sqrt((rightAnkle.x - rightHip.x)**2 + (rightAnkle.y - rightHip.y)**2);
+            rightLeg.scale.y = rightLegLength / 0.3;
+            rightLeg.position.set((rightHip.x + rightAnkle.x)/2, (rightHip.y + rightAnkle.y)/2, 0);
+            rightLeg.rotation.z = Math.atan2(rightAnkle.y - rightHip.y, rightAnkle.x - rightHip.x) - Math.PI/2;
+        }
+
         async function initPose() {
+            initThreeJS();
+
             pose = new Pose({
                 locateFile: (file) => {
                     return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
@@ -194,8 +323,6 @@
 
             canvasElement.width = 640;
             canvasElement.height = 480;
-
-            initThreeJS();
         }
 
         initPose();
