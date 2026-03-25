@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 
   <script type="module">
-    const modelPath = 'Modelos/prueba.glb'; // Cambiar por tu GLB rigged con esqueleto humano
+    const modelPath = 'https://raw.githubusercontent.com/paginatodofarma/Visualizador-3d/main/Modelos/prueba.glb'; // Ruta absoluta raw para evitar CORS / file:// issues
     const keypointIndices = {
       leftShoulder: 11,
       rightShoulder: 12,
@@ -44,6 +44,7 @@
 
     let camera3D, scene, renderer, controls, skeletonHelper;
     let rig = null;
+    let skeleton = null;
     let mpCamera = null;
     let currentLandmarks = null;
 
@@ -81,17 +82,22 @@
       loader.load(modelPath, gltf => {
         rig = gltf.scene;
         rig.traverse(child => {
-          if (child.isMesh) {
+          if (child.isSkinnedMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
+            skeleton = child.skeleton;
           }
         });
         scene.add(rig);
 
-        const skel = new THREE.SkeletonHelper(rig);
-        skel.material.linewidth = 2;
-        scene.add(skel);
-        skeletonHelper = skel;
+        if (skeleton) {
+          const skel = new THREE.SkeletonHelper(rig);
+          skel.material.linewidth = 2;
+          scene.add(skel);
+          skeletonHelper = skel;
+        } else {
+          status.textContent = 'Modelo cargado, pero no se detectó esqueleto (SkinnedMesh). Revisa el GLB.';
+        }
 
         const box = new THREE.Box3().setFromObject(rig);
         const size = box.getSize(new THREE.Vector3()).length();
@@ -129,9 +135,7 @@
     }
 
     function applyPoseToRig(landmarks) {
-      if (!rig) return;
-      const skeleton = new THREE.SkeletonHelper(rig).skeleton;
-      if (!skeleton) return;
+      if (!rig || !skeleton) return;
 
       const leftShoulder = getPoint(keypointIndices.leftShoulder);
       const rightShoulder = getPoint(keypointIndices.rightShoulder);
