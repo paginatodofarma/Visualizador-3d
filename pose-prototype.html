@@ -3,197 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prototipo Pose Landmarker - TodoFarma</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1675469404/drawing_utils.js"></script>
+    <title>Prototipo Pose Landmarker - MediaPipe</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
             background-color: #f4f4f4;
+            text-align: center;
         }
         h1 {
-            text-align: center;
-        }
-        .container {
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-start;
+            color: #333;
         }
         #video {
-            width: 640px;
-            height: 480px;
-            border: 1px solid #ccc;
-            position: relative;
-        }
-        .video-container {
-            position: relative;
+            display: none;
         }
         #canvas {
-            width: 640px;
-            height: 480px;
-            border: 1px solid #ccc;
+            border: 2px solid #333;
+            max-width: 100%;
+            height: auto;
         }
-        .info {
+        #threeCanvas {
+            border: 2px solid #333;
             margin-top: 20px;
-            text-align: center;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #007bff;
         }
     </style>
 </head>
 <body>
-    <h1>Prototipo Pose Landmarker con Three.js</h1>
-    <div class="container">
-        <div>
-            <h2>Cámara</h2>
-            <div class="video-container">
-                <video id="video" autoplay></video>
-                <canvas id="overlay"></canvas>
-            </div>
-        </div>
-        <div>
-            <h2>Modelo 3D Animado</h2>
-            <canvas id="canvas"></canvas>
-        </div>
+    <h1>Prototipo de Detección de Pose con MediaPipe</h1>
+    <p>Esta página detecta poses corporales en tiempo real y muestra el esqueleto.</p>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <canvas id="threeCanvas" width="640" height="480"></canvas>
+    <div class="controls">
+        <button id="toggleSkeleton">Ocultar Esqueleto</button>
     </div>
-    <div class="info">
-        <p>Permite acceso a la cámara para detectar poses. El cubo en 3D se rota basado en la pose de los brazos.</p>
-    </div>
+    <div class="status" id="status">Cargando...</div>
 
-    <script type="module">
-        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js';
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
 
-        // Inicializar Three.js
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, 640 / 480, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
-        renderer.setSize(640, 480);
+    <script>
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const statusElement = document.getElementById('status');
+        const toggleButton = document.getElementById('toggleSkeleton');
 
-        // Crear 4 cubos para cabeza, torso, brazo izq, brazo der
-        const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-        const headMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Rojo
-        const torsoMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Azul
-        const leftArmMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Verde
-        const rightArmMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Amarillo
+        let pose;
+        let showSkeleton = true;
+        let scene, camera, renderer, cube;
 
-        const head = new THREE.Mesh(geometry, headMaterial);
-        const torso = new THREE.Mesh(geometry, torsoMaterial);
-        const leftArm = new THREE.Mesh(geometry, leftArmMaterial);
-        const rightArm = new THREE.Mesh(geometry, rightArmMaterial);
-
-        scene.add(head);
-        scene.add(torso);
-        scene.add(leftArm);
-        scene.add(rightArm);
-
-        camera.position.z = 5;
-
-        // Función para animar los 4 cubos
-        function animateCubes(landmarks) {
-            if (!landmarks || landmarks.length === 0) return;
-
-            // Cabeza: posición promedio de ojos
-            const leftEye = landmarks[1];
-            const rightEye = landmarks[2];
-            if (leftEye && rightEye) {
-                head.position.x = ((leftEye.x + rightEye.x) / 2 - 0.5) * 10;
-                head.position.y = -((leftEye.y + rightEye.y) / 2 - 0.5) * 10; // Invertir Y
-                head.position.z = 0;
-            }
-
-            // Torso: posición promedio de hombros y caderas
-            const leftShoulder = landmarks[11];
-            const rightShoulder = landmarks[12];
-            const leftHip = landmarks[23];
-            const rightHip = landmarks[24];
-            if (leftShoulder && rightShoulder && leftHip && rightHip) {
-                torso.position.x = ((leftShoulder.x + rightShoulder.x + leftHip.x + rightHip.x) / 4 - 0.5) * 10;
-                torso.position.y = -((leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4 - 0.5) * 10;
-                torso.position.z = 0;
-            }
-
-            // Brazo izquierdo: posición en hombro izquierdo
-            if (leftShoulder) {
-                leftArm.position.x = (leftShoulder.x - 0.5) * 10;
-                leftArm.position.y = -(leftShoulder.y - 0.5) * 10;
-                leftArm.position.z = 0;
-            }
-
-            // Brazo derecho: posición en hombro derecho
-            if (rightShoulder) {
-                rightArm.position.x = (rightShoulder.x - 0.5) * 10;
-                rightArm.position.y = -(rightShoulder.y - 0.5) * 10;
-                rightArm.position.z = 0;
-            }
-
-            renderer.render(scene, camera);
-        }
-
-        // Inicializar MediaPipe Pose
-        const pose = new window.Pose({
-            locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
-            }
+        // Toggle skeleton
+        toggleButton.addEventListener('click', () => {
+            showSkeleton = !showSkeleton;
+            toggleButton.textContent = showSkeleton ? 'Ocultar Esqueleto' : 'Mostrar Esqueleto';
         });
 
-        pose.setOptions({
-            modelComplexity: 1,
-            smoothLandmarks: true,
-            enableSegmentation: false,
-            smoothSegmentation: false,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
+        // Three.js setup
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, 640 / 480, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threeCanvas') });
+            renderer.setSize(640, 480);
 
-        pose.onResults((results) => {
-            // Dibujar esqueleto en el overlay
-            const canvasElement = document.getElementById('overlay');
-            const canvasCtx = canvasElement.getContext('2d');
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            if (results.poseLandmarks) {
-                window.drawConnectors(canvasCtx, results.poseLandmarks, window.POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
-                window.drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
-                animateCubes(results.poseLandmarks);
-            }
-            canvasCtx.restore();
-        });
+            const geometry = new THREE.BoxGeometry(1, 2, 0.5); // Cubo rectangular
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            cube = new THREE.Mesh(geometry, material);
+            scene.add(cube);
 
-        // Configurar cámara
-        async function setupCamera() {
-            const video = document.getElementById('video');
-            const overlay = document.getElementById('overlay');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-                video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    overlay.width = video.videoWidth;
-                    overlay.height = video.videoHeight;
-                    processFrame();
-                };
-            } catch (error) {
-                console.error('Error accessing camera:', error);
-            }
+            camera.position.z = 5;
+
+            animate();
         }
 
-        function processFrame() {
-            const video = document.getElementById('video');
-            if (video.readyState >= 2) {
-                pose.send({ image: video });
-            }
-            requestAnimationFrame(processFrame);
-        }
-
-        setupCamera();
-
-        // Animar continuamente
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera);
         }
-        animate();
+
+        function calculateTorsoRotation(landmarks) {
+            const leftShoulder = landmarks[11];
+            const rightShoulder = landmarks[12];
+            const leftHip = landmarks[23];
+            const rightHip = landmarks[24];
+
+            // Centro de hombros
+            const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+            const shoulderCenterY = (leftShoulder.y + rightShoulder.y) / 2;
+
+            // Centro de caderas
+            const hipCenterX = (leftHip.x + rightHip.x) / 2;
+            const hipCenterY = (leftHip.y + rightHip.y) / 2;
+
+            // Vector del torso (de caderas a hombros)
+            const torsoVectorX = shoulderCenterX - hipCenterX;
+            const torsoVectorY = shoulderCenterY - hipCenterY;
+
+            // Ángulo de rotación en Y (izquierda-derecha)
+            const angle = Math.atan2(torsoVectorX, torsoVectorY);
+
+            return angle;
+        }
+
+        async function onResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.poseLandmarks) {
+                statusElement.textContent = 'Cuerpo detectado - Mostrando esqueleto';
+                if (showSkeleton) {
+                    drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
+                    drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
+                }
+
+                // Rotar el cubo basado en el torso
+                const torsoRotation = calculateTorsoRotation(results.poseLandmarks);
+                cube.rotation.y = torsoRotation;
+            } else {
+                statusElement.textContent = 'No se detecta cuerpo - Asegúrate de estar frente a la cámara';
+            }
+            canvasCtx.restore();
+        }
+
+        async function initPose() {
+            pose = new Pose({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
+                }
+            });
+            pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                smoothSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            pose.onResults(onResults);
+
+            const camera = new Camera(videoElement, {
+                onFrame: async () => {
+                    await pose.send({image: videoElement});
+                },
+                width: 640,
+                height: 480
+            });
+            camera.start();
+
+            canvasElement.width = 640;
+            canvasElement.height = 480;
+
+            initThreeJS();
+        }
+
+        initPose();
     </script>
 </body>
-</html></content>
-<parameter name="filePath">c:\Users\Grupo TodoFarma C.A\Downloads\Visualizador 3d\pose-prototype.html
+</html>
