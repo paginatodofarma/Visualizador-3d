@@ -89,10 +89,15 @@
             renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('threeCanvas') });
             renderer.setSize(640, 480);
 
-            const geometry = new THREE.BoxGeometry(1, 2, 0.5); // Cubo rectangular
-            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const geometry = new THREE.BoxGeometry(0.5, 2, 0.5); // Prisma vertical delgado
+            const material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
             cube = new THREE.Mesh(geometry, material);
             scene.add(cube);
+
+            // Agregar luz
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(1, 1, 1).normalize();
+            scene.add(light);
 
             camera.position.z = 5;
 
@@ -122,10 +127,21 @@
             const torsoVectorX = shoulderCenterX - hipCenterX;
             const torsoVectorY = shoulderCenterY - hipCenterY;
 
-            // Ángulo de rotación en Y (izquierda-derecha)
-            const angle = Math.atan2(torsoVectorX, torsoVectorY);
+            // Longitud del vector
+            const length = Math.sqrt(torsoVectorX ** 2 + torsoVectorY ** 2);
 
-            return angle;
+            // Rotación X (pitch): inclinación adelante-atrás
+            const angleX = Math.asin(torsoVectorX / length) * 2; // Exagerar para visibilidad
+
+            // Rotación Y (yaw): giro izquierda-derecha
+            const angleY = Math.atan2(torsoVectorX, -torsoVectorY);
+
+            // Rotación Z (roll): usar diferencia de hombros
+            const shoulderVectorX = rightShoulder.x - leftShoulder.x;
+            const shoulderVectorY = rightShoulder.y - leftShoulder.y;
+            const angleZ = Math.atan2(shoulderVectorY, shoulderVectorX) * 0.5; // Suave
+
+            return { x: angleX, y: angleY, z: angleZ };
         }
 
         async function onResults(results) {
@@ -141,8 +157,10 @@
                 }
 
                 // Rotar el cubo basado en el torso
-                const torsoRotation = calculateTorsoRotation(results.poseLandmarks);
-                cube.rotation.y = torsoRotation;
+                const rotation = calculateTorsoRotation(results.poseLandmarks);
+                cube.rotation.x = rotation.x;
+                cube.rotation.y = rotation.y;
+                cube.rotation.z = rotation.z;
             } else {
                 statusElement.textContent = 'No se detecta cuerpo - Asegúrate de estar frente a la cámara';
             }
