@@ -65,10 +65,30 @@
             left: 20px;
             background: rgba(0,0,0,0.8);
             color: white;
-            padding: 15px;
+            padding: 12px;
             border-radius: 8px;
             z-index: 100;
-            max-width: 300px;
+            width: 320px;
+            max-height: 75vh;
+            overflow-y: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.25s ease;
+        }
+        #controls.collapsed {
+            transform: translateX(-320px);
+        }
+        #controls header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        #controls .toggle-button {
+            background: #444;
+            border: 1px solid #666;
+            padding: 4px 8px;
+            font-size: 0.8em;
+            cursor: pointer;
         }
         .color-picker {
             display: flex;
@@ -106,12 +126,16 @@
         <canvas id="canvas3d"></canvas>
         <canvas id="overlay"></canvas>
         <div id="controls">
-            <h3>Prototipo Camisa Virtual</h3>
+            <header>
+                <h3 style="margin:0;">Prototipo Camisa Virtual</h3>
+                <button class="toggle-button" onclick="toggleControls()">⇔</button>
+            </header>
             <button onclick="togglePoseDetection()">Iniciar/Detener Detección</button>
             <button onclick="resetDetection()">Reiniciar Detección</button>
             <button onclick="toggleSkeleton()">Mostrar/Ocultar Esqueleto</button>
             <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
             <button onclick="showCalibration()">Mostrar Configuraciones</button>
+            <button onclick="copyConfig()">Copiar Configuración</button>
             <div>
                 <label>Color de la camisa:</label>
                 <div class="color-picker">
@@ -162,6 +186,16 @@
                     <label>Rot: <input type="range" id="neckRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('neck', 'rot', this.value)"></label>
                     <label>ScaleX: <input type="range" id="neckScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleX', this.value)"></label>
                     <label>ScaleY: <input type="range" id="neckScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleY', this.value)"></label>
+
+                    <h4>Calibración de esqueleto (X, Y offset)</h4>
+                    <div id="skeletonCalibrationControls">
+                        <label>Hombro Izquierdo: <input type="number" id="skLeftShoulderX" step="0.01" value="0" onchange="updateSkeletonOffset(11, 'x', this.value)">  <input type="number" id="skLeftShoulderY" step="0.01" value="0" onchange="updateSkeletonOffset(11, 'y', this.value)"></label>
+                        <label>Hombro Derecho: <input type="number" id="skRightShoulderX" step="0.01" value="0" onchange="updateSkeletonOffset(12, 'x', this.value)">  <input type="number" id="skRightShoulderY" step="0.01" value="0" onchange="updateSkeletonOffset(12, 'y', this.value)"></label>
+                        <label>Codo Izquierdo: <input type="number" id="skLeftElbowX" step="0.01" value="0" onchange="updateSkeletonOffset(13, 'x', this.value)">  <input type="number" id="skLeftElbowY" step="0.01" value="0" onchange="updateSkeletonOffset(13, 'y', this.value)"></label>
+                        <label>Codo Derecho: <input type="number" id="skRightElbowX" step="0.01" value="0" onchange="updateSkeletonOffset(14, 'x', this.value)">  <input type="number" id="skRightElbowY" step="0.01" value="0" onchange="updateSkeletonOffset(14, 'y', this.value)"></label>
+                        <label>Muñeca Izquierda: <input type="number" id="skLeftWristX" step="0.01" value="0" onchange="updateSkeletonOffset(15, 'x', this.value)">  <input type="number" id="skLeftWristY" step="0.01" value="0" onchange="updateSkeletonOffset(15, 'y', this.value)"></label>
+                        <label>Muñeca Derecha: <input type="number" id="skRightWristX" step="0.01" value="0" onchange="updateSkeletonOffset(16, 'x', this.value)">  <input type="number" id="skRightWristY" step="0.01" value="0" onchange="updateSkeletonOffset(16, 'y', this.value)"></label>
+                    </div>
                 </div>
             </details>
             <p id="status">Estado: Iniciando...</p>
@@ -195,6 +229,16 @@
         // Estado de inicialización de MediaPipe
         let poseReady = false;
         let poseBusy = false;
+
+        // Calibración de esqueleto (offset de landmarks)
+        let skeletonOffset = {
+            11: { x: 0, y: 0 }, // left shoulder
+            12: { x: 0, y: 0 }, // right shoulder
+            13: { x: 0, y: 0 }, // left elbow
+            14: { x: 0, y: 0 }, // right elbow
+            15: { x: 0, y: 0 }, // left wrist
+            16: { x: 0, y: 0 }  // right wrist
+        };
         // Inicializar Three.js
         function initThreeJS() {
             try {
@@ -423,18 +467,33 @@
                 const a = landmarks[i];
                 const b = landmarks[j];
                 if (!a || !b) continue;
+                const ax = (a.x + (skeletonOffset[i]?.x || 0)) * scaleX + offsetX;
+                const ay = (a.y + (skeletonOffset[i]?.y || 0)) * scaleY + offsetY;
+                const bx = (b.x + (skeletonOffset[j]?.x || 0)) * scaleX + offsetX;
+                const by = (b.y + (skeletonOffset[j]?.y || 0)) * scaleY + offsetY;
                 overlayCtx.beginPath();
-                overlayCtx.moveTo(a.x * scaleX + offsetX, a.y * scaleY + offsetY);
-                overlayCtx.lineTo(b.x * scaleX + offsetX, b.y * scaleY + offsetY);
+                overlayCtx.moveTo(ax, ay);
+                overlayCtx.lineTo(bx, by);
                 overlayCtx.stroke();
             }
 
             overlayCtx.fillStyle = 'rgba(255,255,255,0.8)';
-            for (const lm of landmarks) {
+            overlayCtx.font = '12px Arial';
+            overlayCtx.textAlign = 'center';
+            overlayCtx.textBaseline = 'top';
+            for (let index = 0; index < landmarks.length; index++) {
+                const lm = landmarks[index];
                 if (!lm) continue;
+                const lx = (lm.x + (skeletonOffset[index]?.x || 0)) * scaleX + offsetX;
+                const ly = (lm.y + (skeletonOffset[index]?.y || 0)) * scaleY + offsetY;
                 overlayCtx.beginPath();
-                overlayCtx.arc(lm.x * scaleX + offsetX, lm.y * scaleY + offsetY, 4, 0, Math.PI * 2);
+                overlayCtx.arc(lx, ly, 4, 0, Math.PI * 2);
                 overlayCtx.fill();
+                if (skeletonOffset[index]) {
+                    overlayCtx.fillStyle = 'rgba(255,0,0,0.9)';
+                    overlayCtx.fillText(index, lx, ly + 5);
+                    overlayCtx.fillStyle = 'rgba(255,255,255,0.8)';
+                }
             }
         }
 
@@ -480,7 +539,20 @@
                 // Posición global de la camisa (centro del torso)
                 const targetX = (torsoCenterX - 0.5) * 2.0;
                 const targetY = -(torsoCenterY - 0.5) * 2.0;
-                shirtMesh.position.set(targetX, targetY, THREE.MathUtils.clamp(1.0 - (avgZ * 2.0), -0.5, 1.5));
+                const shirtZ = THREE.MathUtils.clamp(1.0 - (avgZ * 2.0), -0.5, 1.5);
+                shirtMesh.position.set(targetX, targetY, shirtZ);
+
+                // Guardar posición de ropa para información
+                const shirtInfo = {
+                    x: targetX,
+                    y: targetY,
+                    z: shirtZ,
+                    width: globalScaleX,
+                    height: globalScaleY
+                };
+                if (document.getElementById('status')) {
+                    document.getElementById('status').textContent = `Estado: Pose detectada ✓ | Camisa en (${shirtInfo.x.toFixed(2)}, ${shirtInfo.y.toFixed(2)}, ${shirtInfo.z.toFixed(2)})`;
+                }
 
                 // Rotación del torso
                 const shoulderAngle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
@@ -562,6 +634,11 @@
             }
         }
 
+        function toggleControls() {
+            const controls = document.getElementById('controls');
+            controls.classList.toggle('collapsed');
+        }
+
         function toggleSkeleton() {
             showSkeleton = !showSkeleton;
             if (!showSkeleton && overlayCtx) {
@@ -588,9 +665,32 @@
             calibration[part][prop] = parseFloat(value);
         }
 
+        function updateSkeletonOffset(index, prop, value) {
+            if (!skeletonOffset[index]) {
+                skeletonOffset[index] = { x: 0, y: 0 };
+            }
+            skeletonOffset[index][prop] = parseFloat(value);
+        }
+
         function showCalibration() {
-            console.log('Configuraciones actuales:', calibration);
+            console.log('Configuraciones actuales:', { calibration, skeletonOffset });
             alert('Revisa la consola (F12 > Console) para ver las configuraciones actuales.');
+        }
+
+        function copyConfig() {
+            const data = JSON.stringify({ calibration, skeletonOffset }, null, 2);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(data).then(() => {
+                    alert('Configuración copiada al portapapeles.');
+                }).catch((err) => {
+                    console.error('Error copiando config:', err);
+                    alert('No se pudo copiar al portapapeles. Abre la consola y copia manualmente.');
+                });
+            } else {
+                console.warn('Clipboard API no disponible');
+                console.log(data);
+                alert('No hay acceso al portapapeles. Revisa la consola.');
+            }
         }
 
         function loadImage(event) {
