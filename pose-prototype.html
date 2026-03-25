@@ -25,6 +25,10 @@
             width: 640px;
             height: 480px;
             border: 1px solid #ccc;
+            position: relative;
+        }
+        .video-container {
+            position: relative;
         }
         #canvas {
             width: 640px;
@@ -42,7 +46,10 @@
     <div class="container">
         <div>
             <h2>Cámara</h2>
-            <video id="video" autoplay></video>
+            <div class="video-container">
+                <video id="video" autoplay></video>
+                <canvas id="overlay"></canvas>
+            </div>
         </div>
         <div>
             <h2>Modelo 3D Animado</h2>
@@ -62,33 +69,63 @@
         const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas') });
         renderer.setSize(640, 480);
 
-        // Crear un cubo simple
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
+        // Crear 4 cubos para cabeza, torso, brazo izq, brazo der
+        const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+        const headMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Rojo
+        const torsoMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Azul
+        const leftArmMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Verde
+        const rightArmMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Amarillo
+
+        const head = new THREE.Mesh(geometry, headMaterial);
+        const torso = new THREE.Mesh(geometry, torsoMaterial);
+        const leftArm = new THREE.Mesh(geometry, leftArmMaterial);
+        const rightArm = new THREE.Mesh(geometry, rightArmMaterial);
+
+        scene.add(head);
+        scene.add(torso);
+        scene.add(leftArm);
+        scene.add(rightArm);
 
         camera.position.z = 5;
 
-        // Función para animar el cubo
-        function animateCube(landmarks) {
-            if (landmarks && landmarks.length > 0) {
-                // Usar landmarks de hombros y codos para rotación
-                const leftShoulder = landmarks[11]; // Hombro izquierdo
-                const rightShoulder = landmarks[12]; // Hombro derecho
-                const leftElbow = landmarks[13]; // Codo izquierdo
-                const rightElbow = landmarks[14]; // Codo derecho
+        // Función para animar los 4 cubos
+        function animateCubes(landmarks) {
+            if (!landmarks || landmarks.length === 0) return;
 
-                if (leftShoulder && rightShoulder && leftElbow && rightElbow) {
-                    // Calcular ángulo basado en diferencia de posiciones
-                    const leftArmAngle = Math.atan2(leftElbow.y - leftShoulder.y, leftElbow.x - leftShoulder.x);
-                    const rightArmAngle = Math.atan2(rightElbow.y - rightShoulder.y, rightElbow.x - rightShoulder.x);
-
-                    // Rotar el cubo basado en el promedio de los ángulos
-                    cube.rotation.x = (leftArmAngle + rightArmAngle) / 2;
-                    cube.rotation.y = (leftArmAngle - rightArmAngle) / 2;
-                }
+            // Cabeza: posición promedio de ojos
+            const leftEye = landmarks[1];
+            const rightEye = landmarks[2];
+            if (leftEye && rightEye) {
+                head.position.x = ((leftEye.x + rightEye.x) / 2 - 0.5) * 10;
+                head.position.y = -((leftEye.y + rightEye.y) / 2 - 0.5) * 10; // Invertir Y
+                head.position.z = 0;
             }
+
+            // Torso: posición promedio de hombros y caderas
+            const leftShoulder = landmarks[11];
+            const rightShoulder = landmarks[12];
+            const leftHip = landmarks[23];
+            const rightHip = landmarks[24];
+            if (leftShoulder && rightShoulder && leftHip && rightHip) {
+                torso.position.x = ((leftShoulder.x + rightShoulder.x + leftHip.x + rightHip.x) / 4 - 0.5) * 10;
+                torso.position.y = -((leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4 - 0.5) * 10;
+                torso.position.z = 0;
+            }
+
+            // Brazo izquierdo: posición en hombro izquierdo
+            if (leftShoulder) {
+                leftArm.position.x = (leftShoulder.x - 0.5) * 10;
+                leftArm.position.y = -(leftShoulder.y - 0.5) * 10;
+                leftArm.position.z = 0;
+            }
+
+            // Brazo derecho: posición en hombro derecho
+            if (rightShoulder) {
+                rightArm.position.x = (rightShoulder.x - 0.5) * 10;
+                rightArm.position.y = -(rightShoulder.y - 0.5) * 10;
+                rightArm.position.z = 0;
+            }
+
             renderer.render(scene, camera);
         }
 
@@ -109,19 +146,30 @@
         });
 
         pose.onResults((results) => {
+            // Dibujar esqueleto en el overlay
+            const canvasElement = document.getElementById('overlay');
+            const canvasCtx = canvasElement.getContext('2d');
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             if (results.poseLandmarks) {
-                animateCube(results.poseLandmarks);
+                window.drawConnectors(canvasCtx, results.poseLandmarks, window.POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
+                window.drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
+                animateCubes(results.poseLandmarks);
             }
+            canvasCtx.restore();
         });
 
         // Configurar cámara
         async function setupCamera() {
             const video = document.getElementById('video');
+            const overlay = document.getElementById('overlay');
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
                     video.play();
+                    overlay.width = video.videoWidth;
+                    overlay.height = video.videoHeight;
                     processFrame();
                 };
             } catch (error) {
@@ -130,7 +178,10 @@
         }
 
         function processFrame() {
-            pose.send({ image: document.getElementById('video') });
+            const video = document.getElementById('video');
+            if (video.readyState >= 2) {
+                pose.send({ image: video });
+            }
             requestAnimationFrame(processFrame);
         }
 
