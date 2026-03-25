@@ -37,6 +37,18 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: 3;
+        }
+        #image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 2;
+            pointer-events: none;
+            display: none;
         }
         #overlay {
             position: absolute;
@@ -45,7 +57,7 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 5;
+            z-index: 6;
         }
         #controls {
             position: absolute;
@@ -90,6 +102,7 @@
 <body>
     <div id="container">
         <video id="video" autoplay muted></video>
+        <img id="image" style="display:none;" />
         <canvas id="canvas3d"></canvas>
         <canvas id="overlay"></canvas>
         <div id="controls">
@@ -115,7 +128,6 @@
                 <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
                 <button onclick="switchToVideo()">Volver a Video</button>
             </div>
-            <img id="image" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
             <details>
                 <summary>Calibración de Partes</summary>
                 <div id="calibration">
@@ -180,7 +192,9 @@
         // Modo imagen
         let useImage = false;
         let currentImage = null;
-
+        // Estado de inicialización de MediaPipe
+        let poseReady = false;
+        let poseBusy = false;
         // Inicializar Three.js
         function initThreeJS() {
             try {
@@ -310,27 +324,30 @@
 
                 pose.onResults(onResults);
 
-                // Inicializar cámara después de que pose esté listo
-                pose.initialize().then(() => {
-                    console.log('MediaPipe Pose inicializado correctamente');
-                    camera = new Camera(document.getElementById('video'), {
-                        onFrame: async () => {
-                            if (isDetecting && pose && !useImage) {
-                                try {
-                                    await pose.send({ image: document.getElementById('video') });
-                                } catch (error) {
-                                    console.error('Error enviando frame a MediaPipe:', error);
-                                    // No detener detección por errores temporales
-                                }
+                // Inicializar estado y cámara una sola vez
+                poseReady = true;
+                console.log('MediaPipe Pose listo');
+
+                const videoElement = document.getElementById('video');
+                camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        if (isDetecting && poseReady && pose && !useImage && !poseBusy) {
+                            poseBusy = true;
+                            try {
+                                await pose.send({ image: videoElement });
+                            } catch (error) {
+                                console.error('Error enviando frame a MediaPipe:', error);
+                                // No detener detección por errores temporales
+                            } finally {
+                                poseBusy = false;
                             }
-                        },
-                        width: 640,
-                        height: 480
-                    });
-                }).catch((error) => {
-                    console.error('Error inicializando MediaPipe:', error);
-                    document.getElementById('status').textContent = 'Error inicializando MediaPipe: ' + error.message;
+                        }
+                    },
+                    width: 640,
+                    height: 480
                 });
+
+                document.getElementById('status').textContent = 'Estado: MediaPipe cargado. Haz clic en Iniciar/Detener Detección';
 
             } catch (error) {
                 console.error('Error en initPose:', error);
@@ -576,32 +593,27 @@
 
         function loadImage(event) {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    currentImage = new Image();
-                    currentImage.onload = function() {
-                        useImage = true;
-                        document.getElementById('video').style.display = 'none';
-                        document.getElementById('image').src = e.target.result;
-                        document.getElementById('image').style.display = 'block';
-                        // Procesar pose en la imagen
-                        processImagePose();
-                    };
-                    currentImage.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
+            if (!file) return;
 
-        async function processImagePose() {
-            if (!pose || !currentImage) return;
-            try {
-                const results = await pose.send({ image: currentImage });
-                onResults(results);
-            } catch (error) {
-                console.error('Error procesando imagen:', error);
+            if (camera && isDetecting) {
+                camera.stop();
+                isDetecting = false;
             }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImage = new Image();
+                currentImage.onload = function() {
+                    useImage = true;
+                    document.getElementById('video').style.display = 'none';
+                    document.getElementById('image').src = e.target.result;
+                    document.getElementById('image').style.display = 'block';
+                    // Procesar pose en la imagen
+                    processImagePose();
+                };
+                currentImage.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
 
         function switchToVideo() {
@@ -609,9 +621,28 @@
             document.getElementById('video').style.display = 'block';
             document.getElementById('image').style.display = 'none';
             currentImage = null;
+            if (camera) {
+                // Reiniciar cámara para continuar detección
+                camera.start();
+                isDetecting = true;
+            }
             // Limpiar overlay si es necesario
-            const overlayCtx = overlayCanvas.getContext('2d');
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            if (overlayCtx) {
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            }
+        }
+
+        async function processImagePose() {
+            if (!pose || !currentImage || !poseReady || poseBusy) return;
+            poseBusy = true;
+            try {
+                const results = await pose.send({ image: currentImage });
+                onResults(results);
+            } catch (error) {
+                console.error('Error procesando imagen:', error);
+            } finally {
+                poseBusy = false;
+            }
         }
 
         function toggleShirt() {
