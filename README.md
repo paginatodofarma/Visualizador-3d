@@ -25,27 +25,7 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 ## Agregar Más Modelos
 
 1. Coloca tus archivos .glb en la carpeta `Modelos/`.
-2. La página ahora consulta automáticamente la carpeta `Modelos/` en tu repositorio GitHub público interno, por lo que NO es necesario actualizar la lista manualmente.
-
-- Se viaja a:
-  `https://api.github.com/repos/paginatodofarma/Visualizador-3d/contents/Modelos`
-- Si por alguna razón falla la API, usa `modelos.json` como respaldo.
-
-3. Sube a GitHub.
-
-## Routing y URL directa por modelo
-
-La página usa client-side routing. Cuando seleccionas un modelo, la URL cambia a:
-
-`https://tuusuario.github.io/Visualizador-3d/nombre_del_modelo`
-
-Esto permite URL directas para cada modelo, por ejemplo:
-
-`https://paginatodofarma.github.io/Visualizador-3d/modelo5`.
-
-El botón "Copiar URL del modelo seleccionado" copia la URL actual con el modelo en el path.
-
-El archivo `404.html` asegura que GitHub Pages sirva `index.html` para rutas no existentes (como `/modelo5`) y se cargue el modelo correcto.
+2. Edita `index.html` y agrega un `<li>` en la lista con el onclick correspondiente.
 
 ## Dependencias
 

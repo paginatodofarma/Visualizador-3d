@@ -44,17 +44,6 @@
         .model-list li:hover {
             background: #d9d9d9;
         }
-        .model-list li.selected {
-            background: #a3cef0;
-            font-weight: bold;
-        }
-        #copyLink {
-            margin-top: 12px;
-        }
-        #currentUrl {
-            margin-top: 8px;
-            word-break: break-all;
-        }
     </style>
 </head>
 <body>
@@ -73,180 +62,21 @@
         </model-viewer>
         <div class="model-list">
             <h2>Modelos Disponibles</h2>
-            <ul id="modelList"></ul>
-            <button id="copyLink">Copiar URL del modelo seleccionado</button>
-            <p id="currentUrl"></p>
+            <ul id="modelList">
+                <li onclick="loadModel('Modelos/prueba.glb')">prueba.glb</li>
+                <!-- Agregar más modelos aquí -->
+            </ul>
         </div>
     </div>
 
     <script>
-        let models = [];
-        const fallbackModels = ['prueba'];
-        const repoOwner = 'paginatodofarma';
-        const repoName = 'Visualizador-3d';
-        const modelsPath = 'Modelos';
-
-        function getBasePath() {
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            if (segments.length === 0) return '/';
-            return `/${segments[0]}`;
-        }
-
-        function updateCurrentUrl(modelName) {
-            const current = `${window.location.origin}${getBasePath()}/${modelName}`;
-            document.getElementById('currentUrl').innerText = current;
-            return current;
-        }
-
-        function loadModel(modelName, pushHistory = true) {
+        function loadModel(src) {
             const viewer = document.getElementById('modelViewer');
-            viewer.src = `Modelos/${modelName}.glb`;
-            document.querySelectorAll('#modelList li').forEach(li => li.classList.remove('selected'));
-            const selected = document.querySelector(`#modelList li[data-name="${modelName}"]`);
-            if (selected) selected.classList.add('selected');
-            if (pushHistory) {
-                const basePath = getBasePath();
-                history.pushState(null, '', `${basePath}/${modelName}`);
-            }
-            updateCurrentUrl(modelName);
+            viewer.src = src;
         }
 
-        function renderModelList() {
-            const modelList = document.getElementById('modelList');
-            modelList.innerHTML = '';
-            models.forEach(model => {
-                const li = document.createElement('li');
-                li.textContent = model;
-                li.dataset.name = model;
-                li.addEventListener('click', () => loadModel(model));
-                modelList.appendChild(li);
-            });
-        }
-
-        function fetchModelsFromGithub() {
-            const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${modelsPath}`;
-            return fetch(url)
-                .then(resp => {
-                    if (!resp.ok) throw new Error('GitHub API request failed');
-                    return resp.json();
-                })
-                .then(data => data
-                    .filter(item => item.type === 'file' && item.name.toLowerCase().endsWith('.glb'))
-                    .map(item => item.name.replace(/\.glb$/i, ''))
-                );
-        }
-
-        function init() {
-            fetchModelsFromGithub()
-                .then(data => {
-                    models = data;
-                    if (!models.length) models = fallbackModels;
-                    renderModelList();
-                    const path = window.location.pathname;
-                    const segments = path.split('/').filter(Boolean);
-                    const modelName = segments.length > 1 ? segments[1] : models[0];
-                    loadModel(models.includes(modelName) ? modelName : models[0], false);
-                })
-                .catch(() => {
-                    models = fallbackModels;
-                    renderModelList();
-                    loadModel(models[0], false);
-                });
-        }
-
-        window.onload = init;
-
-        window.onpopstate = function() {
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            const modelName = segments.length > 1 ? segments[1] : models[0];
-            loadModel(models.includes(modelName) ? modelName : models[0], false);
-        };
-
-        document.getElementById('copyLink').addEventListener('click', () => {
-            const modelName = document.querySelector('#modelList li.selected')?.dataset.name || models[0];
-            const url = updateCurrentUrl(modelName);
-            navigator.clipboard.writeText(url).then(() => {
-                alert('URL copiada al portapapeles:\n' + url);
-            }, () => {
-                alert('Error al copiar URL. Usa Ctrl+C para copiar: ' + url);
-            });
-        });
-    </script>
-
-
-        function getBasePath() {
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            if (segments.length === 0) return '/';
-            // Ruta como /Visualizador-3d o /Visualizador-3d/modelo
-            return `/${segments[0]}`;
-        }
-
-        function updateCurrentUrl(modelName) {
-            const current = `${window.location.origin}${getBasePath()}/${modelName}`;
-            document.getElementById('currentUrl').innerText = current;
-            return current;
-        }
-
-        function loadModel(modelName, pushHistory = true) {
-            const viewer = document.getElementById('modelViewer');
-            viewer.src = `Modelos/${modelName}.glb`;
-            document.querySelectorAll('#modelList li').forEach(li => li.classList.remove('selected'));
-            const selected = document.querySelector(`#modelList li[data-name="${modelName}"]`);
-            if (selected) selected.classList.add('selected');
-            if (pushHistory) {
-                const basePath = getBasePath();
-                history.pushState(null, '', `${basePath}/${modelName}`);
-            }
-            updateCurrentUrl(modelName);
-        }
-
-        function renderModelList() {
-            const modelList = document.getElementById('modelList');
-            modelList.innerHTML = '';
-            models.forEach(model => {
-                const li = document.createElement('li');
-                li.textContent = model;
-                li.dataset.name = model;
-                li.addEventListener('click', () => loadModel(model));
-                modelList.appendChild(li);
-            });
-        }
-
-        window.onload = function() {
-            renderModelList();
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            const modelName = segments.length > 1 ? segments[1] : 'prueba';
-            if (models.includes(modelName)) {
-                loadModel(modelName, false);
-            } else {
-                loadModel('prueba', false);
-            }
-        };
-
-        window.onpopstate = function() {
-            const path = window.location.pathname;
-            const segments = path.split('/').filter(Boolean);
-            const modelName = segments.length > 1 ? segments[1] : 'prueba';
-            if (models.includes(modelName)) {
-                loadModel(modelName, false);
-            } else {
-                loadModel('prueba', false);
-            }
-        };
-
-        document.getElementById('copyLink').addEventListener('click', () => {
-            const modelName = document.querySelector('#modelList li.selected')?.dataset.name || 'prueba';
-            const url = updateCurrentUrl(modelName);
-            navigator.clipboard.writeText(url).then(() => {
-                alert('URL copiada al portapapeles:\n' + url);
-            }, () => {
-                alert('Error al copiar URL. Usa Ctrl+C para copiar: ' + url);
-            });
-        });
+        // Función para cargar modelos dinámicamente si es necesario
+        // Por ahora, hardcodeados
     </script>
 </body>
 </html>
