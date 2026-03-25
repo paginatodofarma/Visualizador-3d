@@ -110,6 +110,12 @@
                     <div class="color-option" style="background-color: #ff00ff;" onclick="changeShirtColor(0xff00ff, this)"></div>
                 </div>
             </div>
+            <div>
+                <label>Cargar Imagen para Detección:</label>
+                <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
+                <button onclick="switchToVideo()">Volver a Video</button>
+            </div>
+            <img id="image" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
             <details>
                 <summary>Calibración de Partes</summary>
                 <div id="calibration">
@@ -170,6 +176,10 @@
             sleeveRight: { x: 0, y: 0, z: 0, rot: 0, scaleX: 1, scaleY: 1 },
             neck: { x: 0, y: 0, z: 0, rot: 0, scaleX: 1, scaleY: 1 }
         };
+
+        // Modo imagen
+        let useImage = false;
+        let currentImage = null;
 
         // Inicializar Three.js
         function initThreeJS() {
@@ -305,7 +315,7 @@
                     console.log('MediaPipe Pose inicializado correctamente');
                     camera = new Camera(document.getElementById('video'), {
                         onFrame: async () => {
-                            if (isDetecting && pose) {
+                            if (isDetecting && pose && !useImage) {
                                 try {
                                     await pose.send({ image: document.getElementById('video') });
                                 } catch (error) {
@@ -562,6 +572,46 @@
         function showCalibration() {
             console.log('Configuraciones actuales:', calibration);
             alert('Revisa la consola (F12 > Console) para ver las configuraciones actuales.');
+        }
+
+        function loadImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentImage = new Image();
+                    currentImage.onload = function() {
+                        useImage = true;
+                        document.getElementById('video').style.display = 'none';
+                        document.getElementById('image').src = e.target.result;
+                        document.getElementById('image').style.display = 'block';
+                        // Procesar pose en la imagen
+                        processImagePose();
+                    };
+                    currentImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function processImagePose() {
+            if (!pose || !currentImage) return;
+            try {
+                const results = await pose.send({ image: currentImage });
+                onResults(results);
+            } catch (error) {
+                console.error('Error procesando imagen:', error);
+            }
+        }
+
+        function switchToVideo() {
+            useImage = false;
+            document.getElementById('video').style.display = 'block';
+            document.getElementById('image').style.display = 'none';
+            currentImage = null;
+            // Limpiar overlay si es necesario
+            const overlayCtx = overlayCanvas.getContext('2d');
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         }
 
         function toggleShirt() {
