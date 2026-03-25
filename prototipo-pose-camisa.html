@@ -427,9 +427,8 @@
                     shirtMesh.position.y += neckOffset;
                 }
 
-                // Ajuste de escala en profundidad para compensar acercarse/alejarse
-                const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.65, 2.8);
-                shirtMesh.scale.multiplyScalar(depthFactor);
+                // Nota: el ajuste de escala en profundidad ya se aplica arriba.
+                // Se evita redeclarar `depthFactor` para prevenir errores de sintaxis.
 
                 // Ajustar mangas basado en codos
                 if (shirtMesh.children.length >= 3) {
