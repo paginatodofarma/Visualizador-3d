@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 
   <script type="module">
-    const modelPath = 'https://raw.githubusercontent.com/paginatodofarma/Visualizador-3d/main/Modelos/0000000000002/0000000000002%20-%20Verde.glb'; // Modelo GLB existente en tu repo
+    const modelPath = 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf'; // Modelo simple de prueba
     const keypointIndices = {
       leftShoulder: 11,
       rightShoulder: 12,
@@ -78,32 +78,41 @@
 
       window.addEventListener('resize', onResize);
 
+      console.log('Iniciando carga de modelo desde:', modelPath);
       const loader = new THREE.GLTFLoader();
       loader.load(modelPath, gltf => {
-        console.log('GLTF cargado:', gltf);
+        console.log('GLTF cargado exitosamente:', gltf);
+        console.log('Escena GLTF:', gltf.scene);
+        console.log('Número de hijos en escena:', gltf.scene.children.length);
         rig = gltf.scene;
         let hasSkinnedMesh = false;
         rig.traverse(child => {
-          console.log('Child:', child.type, child.name);
+          console.log('Procesando child:', child.type, child.name, 'visible:', child.visible);
           if (child.isSkinnedMesh) {
+            console.log('Encontrado SkinnedMesh:', child.name, 'con skeleton:', !!child.skeleton);
             child.castShadow = true;
             child.receiveShadow = true;
             skeleton = child.skeleton;
             hasSkinnedMesh = true;
           } else if (child.isMesh) {
+            console.log('Encontrado Mesh:', child.name, 'geometría:', !!child.geometry, 'material:', !!child.material);
             child.castShadow = true;
             child.receiveShadow = true;
           }
         });
+        console.log('Agregando rig a escena...');
         scene.add(rig);
 
         if (skeleton) {
+          console.log('Creando SkeletonHelper...');
           const skel = new THREE.SkeletonHelper(rig);
           skel.material.linewidth = 2;
           scene.add(skel);
           skeletonHelper = skel;
+          console.log('SkeletonHelper agregado.');
           status.textContent = 'Modelo cargado con esqueleto. Inicializa la cámara.';
         } else {
+          console.log('No se detectó skeleton (SkinnedMesh).');
           status.textContent = 'Modelo cargado (sin esqueleto). Inicializa la cámara.';
         }
 
@@ -113,11 +122,18 @@
         controls.maxDistance = size * 10;
         rig.position.set(-center.x, -center.y, -center.z);
         console.log('Modelo centrado en:', center, 'tamaño:', size);
+        console.log('Carga completa. Estado final:', status.textContent);
       }, progress => {
-        console.log('Progreso de carga:', (progress.loaded / progress.total * 100) + '%');
+        const percent = (progress.loaded / progress.total * 100).toFixed(2);
+        console.log('Progreso de carga:', percent + '%', 'loaded:', progress.loaded, 'total:', progress.total);
+        status.textContent = 'Cargando modelo: ' + percent + '%';
       }, error => {
-        console.error('Error cargando modelo:', error);
+        console.error('Error completo cargando modelo:', error);
+        console.error('URL del modelo:', modelPath);
+        console.error('Mensaje de error:', error.message);
+        console.error('Stack:', error.stack);
         status.textContent = 'Error cargando modelo: ' + error.message;
+      });
       });
 
       animate();
@@ -136,6 +152,11 @@
         applyPoseToRig(currentLandmarks);
       }
       renderer.render(scene, camera3D);
+      // Log inicial para verificar render
+      if (!window.loggedRender) {
+        console.log('Primer render ejecutado. Escena contiene:', scene.children.length, 'objetos');
+        window.loggedRender = true;
+      }
     }
 
     function getPoint(i) {
