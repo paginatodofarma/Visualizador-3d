@@ -18,11 +18,14 @@
         #video {
             display: none;
         }
-        #canvas {
-            border: 2px solid #333;
-            max-width: 100%;
-            height: auto;
+        #container {
             position: relative;
+            width: 640px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        #canvas {
+            display: none; /* oculta canvas de debug 2D */
         }
         #threejs-container {
             position: absolute;
@@ -43,9 +46,11 @@
     <h1>Prototipo de Detección de Pose con MediaPipe</h1>
     <p>Esta página detecta poses corporales en tiempo real y muestra el esqueleto.</p>
     <button class="share-button" id="toggleSkeletonButton" onclick="toggleSkeleton()" style="background: #ff9800;">Ocultar esqueleto</button>
-    <video id="video" autoplay playsinline></video>
+    <div id="container">
+        <video id="video" autoplay playsinline muted></video>
+        <div id="threejs-container"></div>
+    </div>
     <canvas id="canvas"></canvas>
-    <div id="threejs-container"></div>
     <div class="status" id="status">Cargando...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -69,17 +74,27 @@
         let torso, leftArm, rightArm, leftLeg, rightLeg;
         let joints = {};
         let bones = [];
+        let videoTexture;
 
         function initThreeJS() {
             scene = new THREE.Scene();
-            camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+            const aspect = canvasElement.width / canvasElement.height;
+            camera = new THREE.OrthographicCamera(-aspect, aspect, 1, -1, 0.1, 1000);
             camera.position.z = 1;
 
             renderer = new THREE.WebGLRenderer({ alpha: true });
             renderer.setSize(canvasElement.width, canvasElement.height);
+            renderer.setPixelRatio(window.devicePixelRatio);
             threejsContainer.appendChild(renderer.domElement);
 
-            // Materiales semi-transparentes
+            // FONDO VIDEO como textura en Three.js
+            videoTexture = new THREE.VideoTexture(videoElement);
+            videoTexture.minFilter = THREE.LinearFilter;
+            videoTexture.magFilter = THREE.LinearFilter;
+            videoTexture.format = THREE.RGBAFormat;
+            scene.background = videoTexture;
+
+            // Materiales semi-transparentes (ropa)
             const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.45 });
 
             // Torso (plano)
@@ -144,34 +159,36 @@
         function toggleSkeleton() {
             drawSkeleton = !drawSkeleton;
             toggleSkeletonButton.textContent = drawSkeleton ? 'Ocultar esqueleto' : 'Mostrar esqueleto';
+
+            Object.values(joints).forEach(j => { if (j) j.visible = drawSkeleton; });
+            bones.forEach(b => { if (b && b.line) b.line.visible = drawSkeleton; });
         }
 
         async function onResults(results) {
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
+            // Opcional: dibujar esqueleto 2D en canvas (mantener para debug)
             if (results.poseLandmarks) {
                 statusElement.textContent = drawSkeleton ? 'Cuerpo detectado - Mostrando esqueleto' : 'Cuerpo detectado - Esqueleto oculto';
                 if (drawSkeleton) {
+                    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
                     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
                     drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
                 }
 
-                // Actualizar objetos 3D
+                // Actualizar objetos 3D con anclaje dinámico
                 updateClothing(results.poseLandmarks);
                 renderer.render(scene, camera);
             } else {
                 statusElement.textContent = 'No se detecta cuerpo - Asegúrate de estar frente a la cámara';
+                renderer.render(scene, camera);
             }
-            canvasCtx.restore();
         }
 
         function updateClothing(landmarks) {
-            // Función para convertir coordenadas normalizadas a Three.js (-1 a 1)
+            // Función para convertir coordenadas normalizadas a Three.js (-aspect..aspect, -1..1)
             function toThreeJS(x, y) {
+                const aspect = canvasElement.width / canvasElement.height;
                 return {
-                    x: (x - 0.5) * 2,
+                    x: (x - 0.5) * 2 * aspect,
                     y: -(y - 0.5) * 2
                 };
             }
@@ -195,6 +212,7 @@
             Object.keys(mapped).forEach(key => {
                 const p = mapped[key];
                 if (!joints[key]) return;
+                const target = convertToThreeJS({x: (mapped[key].x + 1)/2, y: 0.5 - (mapped[key].y/2)}); // no usado, pero mantén.
                 joints[key].position.set(p.x, p.y, 0.03);
                 joints[key].visible = true;
             });
@@ -251,6 +269,7 @@
             rightLeg.rotation.z = Math.atan2(ra2.y - rh.y, ra2.x - rh.x) - Math.PI / 2;
         }
 
+
         async function initPose() {
             initThreeJS();
 
@@ -280,6 +299,12 @@
 
             canvasElement.width = 640;
             canvasElement.height = 480;
+            renderer.setSize(canvasElement.width, canvasElement.height);
+            camera.left = -1;
+            camera.right = 1;
+            camera.top = 1;
+            camera.bottom = -1;
+            camera.updateProjectionMatrix();
         }
 
         initPose();
