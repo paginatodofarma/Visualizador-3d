@@ -691,6 +691,11 @@
 
         function updateCalibration(part, prop, value) {
             calibration[part][prop] = parseFloat(value);
+            // Actualizar en tiempo real si hay landmarks
+            if (currentLandmarks) {
+                updateShirtPosition(currentLandmarks);
+                drawSkeleton(currentLandmarks);
+            }
         }
 
         function updateSkeletonOffset(index, prop, value) {
@@ -698,6 +703,10 @@
                 skeletonOffset[index] = { x: 0, y: 0 };
             }
             skeletonOffset[index][prop] = parseFloat(value);
+            // Actualizar en tiempo real si hay landmarks
+            if (currentLandmarks) {
+                drawSkeleton(currentLandmarks);
+            }
         }
 
         function showCalibration() {
@@ -875,6 +884,8 @@
                 if (!skeletonOffset[draggedIndex]) skeletonOffset[draggedIndex] = {x: 0, y: 0};
                 skeletonOffset[draggedIndex].x = normX - dragOffset.x - lm.x;
                 skeletonOffset[draggedIndex].y = normY - dragOffset.y - lm.y;
+                // Redibujar en tiempo real
+                drawSkeleton(currentLandmarks);
             }
         }
 
