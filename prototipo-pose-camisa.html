@@ -436,13 +436,13 @@
                     const rightSleeve = shirtMesh.children[2]; // Manga derecha
 
                     if (leftElbow) {
-                        leftSleeve.position.x = (leftShoulder.x - torsoCenterX) * scaleX;
-                        leftSleeve.position.y = (leftShoulder.y - torsoCenterY) * scaleY * 0.5;
+                        leftSleeve.position.x = (leftShoulder.x - torsoCenterX) * shirtMesh.scale.x;
+                        leftSleeve.position.y = (leftShoulder.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
                     }
 
                     if (rightElbow) {
-                        rightSleeve.position.x = (rightShoulder.x - torsoCenterX) * scaleX;
-                        rightSleeve.position.y = (rightShoulder.y - torsoCenterY) * scaleY * 0.5;
+                        rightSleeve.position.x = (rightShoulder.x - torsoCenterX) * shirtMesh.scale.x;
+                        rightSleeve.position.y = (rightShoulder.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
                     }
                 }
             }
