@@ -44,6 +44,17 @@
         .model-list li:hover {
             background: #d9d9d9;
         }
+        .model-list li.selected {
+            background: #a3cef0;
+            font-weight: bold;
+        }
+        #copyLink {
+            margin-top: 12px;
+        }
+        #currentUrl {
+            margin-top: 8px;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -62,46 +73,97 @@
         </model-viewer>
         <div class="model-list">
             <h2>Modelos Disponibles</h2>
-            <ul id="modelList">
-                <li onclick="loadModel('prueba')">prueba</li>
-                <!-- Agregar más modelos aquí, ej: <li onclick="loadModel('modelo1')">modelo1</li> -->
-            </ul>
+            <ul id="modelList"></ul>
+            <button id="copyLink">Copiar URL del modelo seleccionado</button>
+            <p id="currentUrl"></p>
         </div>
     </div>
 
     <script>
-        function loadModel(modelName) {
-            const viewer = document.getElementById('modelViewer');
-            viewer.src = `Modelos/${modelName}.glb`;
-            // Cambiar la URL
-            const basePath = window.location.pathname.split('/').slice(0, -1).join('/');
-            history.pushState(null, '', `${basePath}/${modelName}`);
+        const models = [
+            'prueba',
+            'modelo1',
+            'modelo2',
+            'modelo3',
+            'modelo4',
+            'modelo5',
+            'modelo6',
+            'modelo7',
+            'modelo8',
+            'modelo9',
+            'modelo10'
+        ];
+
+        function getBasePath() {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(Boolean);
+            if (segments.length === 0) return '/';
+            return `/${segments[0]}`;
         }
 
-        // Detectar la ruta inicial
+        function updateCurrentUrl(modelName) {
+            const current = `${window.location.origin}${getBasePath()}/${modelName}`;
+            document.getElementById('currentUrl').innerText = current;
+            return current;
+        }
+
+        function loadModel(modelName, pushHistory = true) {
+            const viewer = document.getElementById('modelViewer');
+            viewer.src = `Modelos/${modelName}.glb`;
+            document.querySelectorAll('#modelList li').forEach(li => li.classList.remove('selected'));
+            const selected = document.querySelector(`#modelList li[data-name="${modelName}"]`);
+            if (selected) selected.classList.add('selected');
+            if (pushHistory) {
+                const basePath = getBasePath();
+                history.pushState(null, '', `${basePath}/${modelName}`);
+            }
+            updateCurrentUrl(modelName);
+        }
+
+        function renderModelList() {
+            const modelList = document.getElementById('modelList');
+            modelList.innerHTML = '';
+            models.forEach(model => {
+                const li = document.createElement('li');
+                li.textContent = model;
+                li.dataset.name = model;
+                li.addEventListener('click', () => loadModel(model));
+                modelList.appendChild(li);
+            });
+        }
+
         window.onload = function() {
+            renderModelList();
             const path = window.location.pathname;
-            const segments = path.split('/');
-            const modelName = segments[segments.length - 1];
-            if (modelName && modelName !== 'Visualizador-3d' && modelName !== '') {
-                loadModel(modelName);
+            const segments = path.split('/').filter(Boolean);
+            const modelName = segments.length > 1 ? segments[1] : 'prueba';
+            if (models.includes(modelName)) {
+                loadModel(modelName, false);
+            } else {
+                loadModel('prueba', false);
             }
         };
 
-        // Manejar el botón de retroceso
         window.onpopstate = function() {
             const path = window.location.pathname;
-            const segments = path.split('/');
-            const modelName = segments[segments.length - 1];
-            if (modelName && modelName !== 'Visualizador-3d' && modelName !== '') {
-                const viewer = document.getElementById('modelViewer');
-                viewer.src = `Modelos/${modelName}.glb`;
+            const segments = path.split('/').filter(Boolean);
+            const modelName = segments.length > 1 ? segments[1] : 'prueba';
+            if (models.includes(modelName)) {
+                loadModel(modelName, false);
             } else {
-                // Volver al modelo por defecto
-                const viewer = document.getElementById('modelViewer');
-                viewer.src = 'Modelos/prueba.glb';
+                loadModel('prueba', false);
             }
         };
+
+        document.getElementById('copyLink').addEventListener('click', () => {
+            const modelName = document.querySelector('#modelList li.selected')?.dataset.name || 'prueba';
+            const url = updateCurrentUrl(modelName);
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copiada al portapapeles:\n' + url);
+            }, () => {
+                alert('Error al copiar URL. Usa Ctrl+C para copiar: ' + url);
+            });
+        });
     </script>
 </body>
 </html>

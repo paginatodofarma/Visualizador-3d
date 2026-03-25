@@ -27,11 +27,19 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 1. Coloca tus archivos .glb en la carpeta `Modelos/`.
 2. Edita `index.html` y `404.html`, agrega un `<li onclick="loadModel('nombre')">nombre</li>` en la lista, donde 'nombre' es el nombre del archivo sin .glb.
 
-## Routing
+## Routing y URL directa por modelo
 
-La página usa client-side routing. Cuando seleccionas un modelo, la URL cambia a `https://tuusuario.github.io/Visualizador-3d/nombre`, permitiendo compartir enlaces directos a modelos específicos.
+La página usa client-side routing. Cuando seleccionas un modelo, la URL cambia a:
 
-El archivo `404.html` asegura que GitHub Pages sirva la página para rutas inexistentes.
+`https://tuusuario.github.io/Visualizador-3d/nombre_del_modelo`
+
+Esto permite URL directas para cada modelo, por ejemplo:
+
+`https://paginatodofarma.github.io/Visualizador-3d/modelo5`.
+
+El botón "Copiar URL del modelo seleccionado" copia la URL actual con el modelo en el path.
+
+El archivo `404.html` asegura que GitHub Pages sirva `index.html` para rutas no existentes (como `/modelo5`) y se cargue el modelo correcto.
 
 ## Dependencias
 
