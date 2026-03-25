@@ -30,6 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 
   <script type="module">
+    console.log('Script pose-to-three.html iniciado correctamente');
     const modelPath = 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf'; // Modelo simple de prueba
     const keypointIndices = {
       leftShoulder: 11,
@@ -51,7 +52,9 @@
     const status = document.getElementById('status');
 
     function initThree() {
+      console.log('initThree() iniciado');
       scene = new THREE.Scene();
+      console.log('Escena creada');
       scene.background = new THREE.Color(0x222222);
 
       camera3D = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -256,7 +259,16 @@
       currentLandmarks = null;
     });
 
-    initThree();
-  </script>
+    // Cargar modelos al cargar la página
+    window.onload = () => {
+      console.log('window.onload ejecutado');
+      try {
+        initThree();
+        console.log('initThree() llamado sin errores');
+      } catch (error) {
+        console.error('Error en initThree():', error);
+        status.textContent = 'Error inicializando Three.js: ' + error.message;
+      }
+    };
 </body>
 </html>
