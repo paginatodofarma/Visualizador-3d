@@ -44,6 +44,18 @@
         .model-list li:hover {
             background: #d9d9d9;
         }
+        .share-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .share-button:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
 <body>
@@ -59,6 +71,7 @@
             auto-rotate
             shadow-intensity="1">
         </model-viewer>
+        <button class="share-button" onclick="shareCurrentModel()">Compartir Enlace del Modelo Actual</button>
         <div class="model-list">
             <h2>Modelos Disponibles</h2>
             <ul id="modelList">
@@ -73,6 +86,8 @@
         const owner = 'paginatodofarma'; // Tu nombre de usuario de GitHub
         const repo = 'Visualizador-3d'; // Nombre de tu repositorio
         const branch = 'main'; // Rama principal, usualmente 'main' o 'master'
+
+        let currentModelPath = null;
 
         async function loadModels() {
             const modelList = document.getElementById('modelList');
@@ -96,13 +111,17 @@
                 glbFiles.forEach(file => {
                     const li = document.createElement('li');
                     li.textContent = file.relativePath;
-                    li.onclick = () => loadModel(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${file.path}`);
+                    li.onclick = () => loadModel(file.path);
                     modelList.appendChild(li);
                 });
 
-                // Cargar el primer modelo por defecto
-                if (glbFiles.length > 0) {
-                    loadModel(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${glbFiles[0].path}`);
+                // Cargar modelo desde URL o el primero por defecto
+                const urlParams = new URLSearchParams(window.location.search);
+                const modelParam = urlParams.get('model');
+                if (modelParam && glbFiles.some(f => f.path === modelParam)) {
+                    loadModel(modelParam);
+                } else if (glbFiles.length > 0) {
+                    loadModel(glbFiles[0].path);
                 }
             } catch (error) {
                 console.error(error);
@@ -129,9 +148,36 @@
             }
         }
 
-        function loadModel(src) {
+        function loadModel(path) {
+            currentModelPath = path;
             const viewer = document.getElementById('modelViewer');
-            viewer.src = src;
+            viewer.src = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+            // Actualizar URL sin recargar
+            const url = new URL(window.location);
+            url.searchParams.set('model', path);
+            window.history.pushState({}, '', url);
+        }
+
+        function shareCurrentModel() {
+            if (!currentModelPath) {
+                alert('No hay modelo cargado para compartir.');
+                return;
+            }
+            const url = new URL(window.location);
+            url.searchParams.set('model', currentModelPath);
+            navigator.clipboard.writeText(url.toString()).then(() => {
+                alert('Enlace copiado al portapapeles: ' + url.toString());
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+                // Fallback: mostrar en un campo de texto
+                const textArea = document.createElement('textarea');
+                textArea.value = url.toString();
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('Enlace copiado al portapapeles: ' + url.toString());
+            });
         }
 
         // Cargar modelos al cargar la página

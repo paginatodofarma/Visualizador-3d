@@ -7,7 +7,8 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 - Visualización 3D interactiva de modelos GLB
 - Soporte para AR en dispositivos compatibles (WebXR, Scene Viewer, Quick Look)
 - Controles de cámara y rotación automática
-- Lista de modelos disponibles en la carpeta `Modelos/`
+- Lista de modelos disponibles en la carpeta `Modelos/` y subcarpetas
+- **Compartir enlaces:** Genera URLs directas a modelos específicos para compartir
 
 ## Configuración de GitHub Pages
 
