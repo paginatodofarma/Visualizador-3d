@@ -212,7 +212,6 @@
             Object.keys(mapped).forEach(key => {
                 const p = mapped[key];
                 if (!joints[key]) return;
-                const target = convertToThreeJS({x: (mapped[key].x + 1)/2, y: 0.5 - (mapped[key].y/2)}); // no usado, pero mantén.
                 joints[key].position.set(p.x, p.y, 0.03);
                 joints[key].visible = true;
             });
@@ -288,20 +287,21 @@
             });
             pose.onResults(onResults);
 
-            const camera = new Camera(videoElement, {
+            const cameraUtils = new Camera(videoElement, {
                 onFrame: async () => {
                     await pose.send({image: videoElement});
                 },
                 width: 640,
                 height: 480
             });
-            camera.start();
+            cameraUtils.start();
 
             canvasElement.width = 640;
             canvasElement.height = 480;
             renderer.setSize(canvasElement.width, canvasElement.height);
-            camera.left = -1;
-            camera.right = 1;
+            const aspect = canvasElement.width / canvasElement.height;
+            camera.left = -aspect;
+            camera.right = aspect;
             camera.top = 1;
             camera.bottom = -1;
             camera.updateProjectionMatrix();
