@@ -78,16 +78,21 @@
             const modelList = document.getElementById('modelList');
             modelList.innerHTML = '<li>Cargando modelos...</li>';
 
+            if (owner === 'tuusuario' || repo === 'tunombre-repo') {
+                modelList.innerHTML = '<li>Configura tu usuario y repositorio en el código fuente.</li>';
+                return;
+            }
+
             try {
                 const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/Modelos?ref=${branch}`);
                 if (!response.ok) {
-                    throw new Error('Error al obtener la lista de modelos');
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
                 }
                 const files = await response.json();
                 const glbFiles = files.filter(file => file.type === 'file' && file.name.endsWith('.glb'));
 
                 if (glbFiles.length === 0) {
-                    modelList.innerHTML = '<li>No se encontraron archivos .glb</li>';
+                    modelList.innerHTML = '<li>No se encontraron archivos .glb en la carpeta Modelos.</li>';
                     return;
                 }
 
@@ -105,7 +110,7 @@
                 }
             } catch (error) {
                 console.error(error);
-                modelList.innerHTML = '<li>Error al cargar modelos. Verifica la configuración.</li>';
+                modelList.innerHTML = `<li>Error al cargar modelos: ${error.message}. Verifica que el repositorio sea público y la configuración sea correcta.</li>`;
             }
         }
 

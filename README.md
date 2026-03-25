@@ -18,10 +18,12 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 
 ## Configuración del Listado Automático
 
-Edita `index.html` y reemplaza los valores en el script:
-- `const owner = 'tuusuario';` con tu nombre de usuario de GitHub.
-- `const repo = 'tunombre-repo';` con el nombre de tu repositorio.
-- `const branch = 'main';` si usas otra rama (por defecto 'main').
+1. **Asegúrate de que el repositorio sea público** en GitHub (Settings > General > Visibility: Public). La API de GitHub requiere repositorios públicos para acceso anónimo.
+2. Edita `index.html` y reemplaza los valores en el script:
+   - `const owner = 'tuusuario';` con tu nombre de usuario de GitHub.
+   - `const repo = 'tunombre-repo';` con el nombre de tu repositorio (sin espacios, minúsculas).
+   - `const branch = 'main';` si usas otra rama (por defecto 'main').
+3. Sube los cambios a GitHub.
 
 El listado se actualizará automáticamente al cargar la página, obteniendo los archivos .glb de la carpeta `Modelos/` vía la API de GitHub.
 
