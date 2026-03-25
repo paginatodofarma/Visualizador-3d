@@ -213,7 +213,7 @@
                 const p = mapped[key];
                 if (!joints[key]) return;
                 joints[key].position.set(p.x, p.y, 0.03);
-                joints[key].visible = true;
+                joints[key].visible = drawSkeleton;
             });
 
             // Actualizar líneas del skeleton en Three.js
@@ -225,6 +225,7 @@
                 const p2 = jointTo.position;
                 b.line.geometry.setFromPoints([p1, p2]);
                 b.line.geometry.attributes.position.needsUpdate = true;
+                b.line.visible = drawSkeleton;
             });
 
             // Torso: convergencia de hombros y caderas
