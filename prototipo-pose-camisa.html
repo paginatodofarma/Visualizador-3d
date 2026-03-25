@@ -127,7 +127,7 @@
         let currentColor = 0xffffff;
 
         // Inicializar Three.js
-        function initThreeJS() {
+        async function initThreeJS() {
             try {
                 // Verificar que el canvas existe
                 const canvas = document.getElementById('canvas3d');
@@ -160,8 +160,8 @@
                 directionalLight.position.set(0, 1, 1);
                 scene.add(directionalLight);
 
-                // Crear camisa básica con geometría personalizada
-                createShirtMesh();
+                // Crear camisa cargando un modelo GLB
+                await createShirtMesh();
 
                 // Configurar canvas de overlay para esqueleto
                 overlayCanvas = document.getElementById('overlay');
@@ -179,44 +179,26 @@
             }
         }
 
-        // Crear camisa básica con geometría personalizada
-        function createShirtMesh() {
-            shirtMesh = new THREE.Group();
-
-            // Material de la camisa
-            shirtMaterial = new THREE.MeshLambertMaterial({
-                color: currentColor,
-                transparent: true,
-                opacity: 0.8,
-                side: THREE.DoubleSide
+        // Crear camisa cargando un modelo GLB
+        async function createShirtMesh() {
+            return new Promise((resolve, reject) => {
+                const loader = new THREE.GLTFLoader();
+                loader.load('Modelos/0000000000002/0000000000002 - Verde.glb', (gltf) => {
+                    shirtMesh = gltf.scene;
+                    // Ajustar escala inicial
+                    shirtMesh.scale.set(0.05, 0.05, 0.05); // Pequeño para empezar
+                    shirtMesh.position.set(0, 0, 0);
+                    shirtMesh.visible = showShirt;
+                    scene.add(shirtMesh);
+                    console.log('Modelo GLB de camisa cargado');
+                    resolve();
+                }, (progress) => {
+                    console.log('Progreso carga GLB:', progress);
+                }, (error) => {
+                    console.error('Error cargando GLB:', error);
+                    reject(error);
+                });
             });
-
-            // Torso (rectángulo principal)
-            const torsoGeometry = new THREE.PlaneGeometry(1, 1.2);
-            const torso = new THREE.Mesh(torsoGeometry, shirtMaterial);
-            torso.position.z = 0.01; // Delante del cuerpo
-            shirtMesh.add(torso);
-
-            // Manga izquierda
-            const sleeveLeftGeometry = new THREE.PlaneGeometry(0.3, 0.6);
-            const sleeveLeft = new THREE.Mesh(sleeveLeftGeometry, shirtMaterial);
-            sleeveLeft.position.set(-0.5, 0.2, 0.01);
-            shirtMesh.add(sleeveLeft);
-
-            // Manga derecha
-            const sleeveRightGeometry = new THREE.PlaneGeometry(0.3, 0.6);
-            const sleeveRight = new THREE.Mesh(sleeveRightGeometry, shirtMaterial);
-            sleeveRight.position.set(0.5, 0.2, 0.01);
-            shirtMesh.add(sleeveRight);
-
-            // Cuello (óvalo simple)
-            const neckGeometry = new THREE.CircleGeometry(0.15, 8);
-            const neck = new THREE.Mesh(neckGeometry, shirtMaterial);
-            neck.position.set(0, 0.5, 0.01);
-            shirtMesh.add(neck);
-
-            shirtMesh.visible = showShirt;
-            scene.add(shirtMesh);
         }
 
         function animate() {
@@ -427,24 +409,8 @@
                     shirtMesh.position.y -= neckOffset; // Cambiado para bajar la camisa si la nariz está arriba
                 }
 
-                // Nota: el ajuste de escala en profundidad ya se aplica arriba.
-                // Se evita redeclarar `depthFactor` para prevenir errores de sintaxis.
-
-                // Ajustar mangas basado en codos
-                if (shirtMesh.children.length >= 3) {
-                    const leftSleeve = shirtMesh.children[1]; // Manga izquierda
-                    const rightSleeve = shirtMesh.children[2]; // Manga derecha
-
-                    if (leftElbow) {
-                        leftSleeve.position.x = (leftElbow.x - torsoCenterX) * shirtMesh.scale.x;
-                        leftSleeve.position.y = (leftElbow.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
-                    }
-
-                    if (rightElbow) {
-                        rightSleeve.position.x = (rightElbow.x - torsoCenterX) * shirtMesh.scale.x;
-                        rightSleeve.position.y = (rightElbow.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
-                    }
-                }
+                // Nota: Para el modelo GLB, no se ajustan mangas individuales ya que es un modelo único.
+            }
             }
         }
 
@@ -535,8 +501,8 @@
         }
 
         // Inicializar todo
-        window.onload = function() {
-            initThreeJS();
+        window.onload = async function() {
+            await initThreeJS();
             initPose();
             document.getElementById('status').textContent = 'Estado: Listo. Haz clic en "Iniciar Detección"';
         };
