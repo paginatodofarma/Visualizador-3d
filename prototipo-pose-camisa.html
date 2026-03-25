@@ -398,7 +398,7 @@
 
                 // Escalar la camisa con anchura/altura del torso y profundidad
                 const baseScaleX = shoulderWidth * 2.0;
-                const baseScaleY = torsoHeight * 2.4;
+                const baseScaleY = torsoHeight * 1.8; // Reducido para evitar superposición en la cara
                 const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2); // más estable
                 shirtMesh.scale.set(baseScaleX * depthFactor, baseScaleY * depthFactor, 1);
 
@@ -423,8 +423,8 @@
 
                 // Ajustar posición Y para que el cuello esté en el nivel correcto
                 if (nose) {
-                    const neckOffset = (nose.y - shoulderCenterY) * 2;
-                    shirtMesh.position.y += neckOffset;
+                    const neckOffset = (nose.y - shoulderCenterY) * 1.0; // Reducido multiplicador
+                    shirtMesh.position.y -= neckOffset; // Cambiado para bajar la camisa si la nariz está arriba
                 }
 
                 // Nota: el ajuste de escala en profundidad ya se aplica arriba.
@@ -436,13 +436,13 @@
                     const rightSleeve = shirtMesh.children[2]; // Manga derecha
 
                     if (leftElbow) {
-                        leftSleeve.position.x = (leftShoulder.x - torsoCenterX) * shirtMesh.scale.x;
-                        leftSleeve.position.y = (leftShoulder.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
+                        leftSleeve.position.x = (leftElbow.x - torsoCenterX) * shirtMesh.scale.x;
+                        leftSleeve.position.y = (leftElbow.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
                     }
 
                     if (rightElbow) {
-                        rightSleeve.position.x = (rightShoulder.x - torsoCenterX) * shirtMesh.scale.x;
-                        rightSleeve.position.y = (rightShoulder.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
+                        rightSleeve.position.x = (rightElbow.x - torsoCenterX) * shirtMesh.scale.x;
+                        rightSleeve.position.y = (rightElbow.y - torsoCenterY) * shirtMesh.scale.y * 0.5;
                     }
                 }
             }
