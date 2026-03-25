@@ -98,6 +98,7 @@
             <button onclick="resetDetection()">Reiniciar Detección</button>
             <button onclick="toggleSkeleton()">Mostrar/Ocultar Esqueleto</button>
             <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
+            <button onclick="showCalibration()">Mostrar Configuraciones</button>
             <div>
                 <label>Color de la camisa:</label>
                 <div class="color-picker">
@@ -109,6 +110,42 @@
                     <div class="color-option" style="background-color: #ff00ff;" onclick="changeShirtColor(0xff00ff, this)"></div>
                 </div>
             </div>
+            <details>
+                <summary>Calibración de Partes</summary>
+                <div id="calibration">
+                    <h4>Torso</h4>
+                    <label>X: <input type="range" id="torsoX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="torsoY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="torsoZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('torso', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="torsoRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('torso', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="torsoScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="torsoScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('torso', 'scaleY', this.value)"></label>
+
+                    <h4>Manga Izquierda</h4>
+                    <label>X: <input type="range" id="sleeveLeftX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="sleeveLeftY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="sleeveLeftZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="sleeveLeftRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveLeft', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="sleeveLeftScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="sleeveLeftScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveLeft', 'scaleY', this.value)"></label>
+
+                    <h4>Manga Derecha</h4>
+                    <label>X: <input type="range" id="sleeveRightX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="sleeveRightY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="sleeveRightZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="sleeveRightRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('sleeveRight', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="sleeveRightScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="sleeveRightScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('sleeveRight', 'scaleY', this.value)"></label>
+
+                    <h4>Cuello</h4>
+                    <label>X: <input type="range" id="neckX" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'x', this.value)"></label>
+                    <label>Y: <input type="range" id="neckY" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'y', this.value)"></label>
+                    <label>Z: <input type="range" id="neckZ" min="-1" max="1" step="0.01" value="0" oninput="updateCalibration('neck', 'z', this.value)"></label>
+                    <label>Rot: <input type="range" id="neckRot" min="-3.14" max="3.14" step="0.01" value="0" oninput="updateCalibration('neck', 'rot', this.value)"></label>
+                    <label>ScaleX: <input type="range" id="neckScaleX" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleX', this.value)"></label>
+                    <label>ScaleY: <input type="range" id="neckScaleY" min="0.1" max="3" step="0.01" value="1" oninput="updateCalibration('neck', 'scaleY', this.value)"></label>
+                </div>
+            </details>
             <p id="status">Estado: Iniciando...</p>
         </div>
     </div>
@@ -125,6 +162,14 @@
         let showShirt = true;
         let showSkeleton = true;
         let currentColor = 0xffffff;
+
+        // Calibración
+        let calibration = {
+            torso: { x: 0, y: 0, z: 0, rot: 0, scaleX: 1, scaleY: 1 },
+            sleeveLeft: { x: 0, y: 0, z: 0, rot: 0, scaleX: 1, scaleY: 1 },
+            sleeveRight: { x: 0, y: 0, z: 0, rot: 0, scaleX: 1, scaleY: 1 },
+            neck: { x: 0, y: 0, z: 0, rot: 0, scaleX: 1, scaleY: 1 }
+        };
 
         // Inicializar Three.js
         function initThreeJS() {
@@ -380,6 +425,8 @@
             const rightShoulder = landmarks[12];
             const leftElbow = landmarks[13];
             const rightElbow = landmarks[14];
+            const leftWrist = landmarks[15];
+            const rightWrist = landmarks[16];
             const leftHip = landmarks[23];
             const rightHip = landmarks[24];
 
@@ -419,31 +466,39 @@
 
                 // Actualizar torso
                 if (torso) {
-                    torso.scale.set(globalScaleX, globalScaleY, 1);
-                    torso.position.set(0, 0, 0.01); // Relativo al grupo
+                    torso.scale.set(globalScaleX * calibration.torso.scaleX, globalScaleY * calibration.torso.scaleY, 1);
+                    torso.position.set(calibration.torso.x, calibration.torso.y, calibration.torso.z + 0.01);
+                    torso.rotation.z = calibration.torso.rot;
                 }
 
                 // Actualizar cuello
                 if (neck && nose) {
-                    const neckX = (nose.x - torsoCenterX) * globalScaleX;
-                    const neckY = (nose.y - torsoCenterY) * globalScaleY;
-                    neck.position.set(neckX, neckY + 0.1, 0.01); // Un poco arriba
-                    neck.scale.set(1, 1, 1); // Escala fija o ajustar
+                    const neckX = (nose.x - torsoCenterX) * globalScaleX + calibration.neck.x;
+                    const neckY = (nose.y - torsoCenterY) * globalScaleY + calibration.neck.y;
+                    neck.position.set(neckX, neckY + 0.1, calibration.neck.z + 0.01);
+                    neck.rotation.z = calibration.neck.rot;
+                    neck.scale.set(calibration.neck.scaleX, calibration.neck.scaleY, 1);
                 }
 
                 // Actualizar mangas
-                if (sleeveLeft && leftElbow) {
-                    const sleeveX = (leftElbow.x - torsoCenterX) * globalScaleX;
-                    const sleeveY = (leftElbow.y - torsoCenterY) * globalScaleY;
-                    sleeveLeft.position.set(sleeveX, sleeveY, 0.01);
-                    sleeveLeft.scale.set(1, 1, 1); // Escala fija
+                if (sleeveLeft && leftElbow && leftShoulder) {
+                    const sleeveX = (leftElbow.x - torsoCenterX) * globalScaleX + calibration.sleeveLeft.x;
+                    const sleeveY = (leftElbow.y - torsoCenterY) * globalScaleY + calibration.sleeveLeft.y;
+                    sleeveLeft.position.set(sleeveX, sleeveY, calibration.sleeveLeft.z + 0.01);
+                    // Rotación basada en el brazo
+                    const armAngle = Math.atan2(leftElbow.y - leftShoulder.y, leftElbow.x - leftShoulder.x);
+                    sleeveLeft.rotation.z = armAngle + calibration.sleeveLeft.rot;
+                    sleeveLeft.scale.set(calibration.sleeveLeft.scaleX, calibration.sleeveLeft.scaleY, 1);
                 }
 
-                if (sleeveRight && rightElbow) {
-                    const sleeveX = (rightElbow.x - torsoCenterX) * globalScaleX;
-                    const sleeveY = (rightElbow.y - torsoCenterY) * globalScaleY;
-                    sleeveRight.position.set(sleeveX, sleeveY, 0.01);
-                    sleeveRight.scale.set(1, 1, 1);
+                if (sleeveRight && rightElbow && rightShoulder) {
+                    const sleeveX = (rightElbow.x - torsoCenterX) * globalScaleX + calibration.sleeveRight.x;
+                    const sleeveY = (rightElbow.y - torsoCenterY) * globalScaleY + calibration.sleeveRight.y;
+                    sleeveRight.position.set(sleeveX, sleeveY, calibration.sleeveRight.z + 0.01);
+                    // Rotación basada en el brazo
+                    const armAngle = Math.atan2(rightElbow.y - rightShoulder.y, rightElbow.x - rightShoulder.x);
+                    sleeveRight.rotation.z = armAngle + calibration.sleeveRight.rot;
+                    sleeveRight.scale.set(calibration.sleeveRight.scaleX, calibration.sleeveRight.scaleY, 1);
                 }
             }
         }
@@ -498,6 +553,15 @@
             if (element) {
                 element.classList.add('selected');
             }
+        }
+
+        function updateCalibration(part, prop, value) {
+            calibration[part][prop] = parseFloat(value);
+        }
+
+        function showCalibration() {
+            console.log('Configuraciones actuales:', calibration);
+            alert('Revisa la consola (F12 > Console) para ver las configuraciones actuales.');
         }
 
         function toggleShirt() {
