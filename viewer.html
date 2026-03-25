@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador 3D</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        #container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+    <!-- AR.js -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const model = urlParams.get('model');
+        const mode = urlParams.get('mode');
+
+        if (mode === 'ar') {
+            // AR mode using AR.js
+            document.body.innerHTML = `
+                <a-scene embedded arjs>
+                    <a-marker preset="hiro">
+                        <a-entity gltf-model="Modelos/${model}" scale="0.1 0.1 0.1"></a-entity>
+                    </a-marker>
+                    <a-entity camera></a-entity>
+                </a-scene>
+            `;
+        } else {
+            // Normal 3D mode
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+
+            // Load GLB model
+            const loader = new THREE.GLTFLoader();
+            loader.load(`Modelos/${model}`, function(gltf) {
+                scene.add(gltf.scene);
+                // Center the model
+                const box = new THREE.Box3().setFromObject(gltf.scene);
+                const center = box.getCenter(new THREE.Vector3());
+                gltf.scene.position.sub(center);
+                camera.position.set(0, 0, box.getSize(new THREE.Vector3()).length());
+                camera.lookAt(0, 0, 0);
+            }, undefined, function(error) {
+                console.error(error);
+            });
+
+            // Controls
+            const controls = { isMouseDown: false, mouseX: 0, mouseY: 0 };
+            document.addEventListener('mousedown', (e) => { controls.isMouseDown = true; controls.mouseX = e.clientX; controls.mouseY = e.clientY; });
+            document.addEventListener('mouseup', () => controls.isMouseDown = false);
+            document.addEventListener('mousemove', (e) => {
+                if (controls.isMouseDown) {
+                    const deltaX = e.clientX - controls.mouseX;
+                    const deltaY = e.clientY - controls.mouseY;
+                    camera.rotation.y += deltaX * 0.01;
+                    camera.rotation.x += deltaY * 0.01;
+                    controls.mouseX = e.clientX;
+                    controls.mouseY = e.clientY;
+                }
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+    </script>
+</body>
+</html></content>
+<parameter name="filePath">c:\Users\Grupo TodoFarma C.A\Downloads\Visualizador 3d\viewer.html
