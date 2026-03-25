@@ -398,14 +398,14 @@
 
                 // Escalar la camisa con anchura/altura del torso y profundidad
                 const baseScaleX = shoulderWidth * 2.0;
-                const baseScaleY = torsoHeight * 1.5; // Reducido más para evitar superposición
+                const baseScaleY = torsoHeight * 1.8; // Reducido para evitar superposición en la cara
                 const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2); // más estable
                 shirtMesh.scale.set(baseScaleX * depthFactor, baseScaleY * depthFactor, 1);
 
                 // Posicionar la camisa en el marco de la cámara
                 // map normalizado [0,1] → alrededor de [-1,1]
-                const targetX = (shoulderCenterX - 0.5) * 2.0; // Usar centro de hombros para X
-                const targetY = -(shoulderCenterY - 0.5) * 2.0; // Usar centro de hombros para Y, más arriba que el torso completo
+                const targetX = (torsoCenterX - 0.5) * 2.0;
+                const targetY = -(torsoCenterY - 0.5) * 2.0;
                 shirtMesh.position.x = targetX;
                 shirtMesh.position.y = targetY;
 
@@ -423,8 +423,8 @@
 
                 // Ajustar posición Y para que el cuello esté en el nivel correcto
                 if (nose) {
-                    const neckOffset = (nose.y - shoulderCenterY) * 0.5; // Reducido más
-                    shirtMesh.position.y -= neckOffset;
+                    const neckOffset = (nose.y - shoulderCenterY) * 1.0; // Reducido multiplicador
+                    shirtMesh.position.y -= neckOffset; // Cambiado para bajar la camisa si la nariz está arriba
                 }
 
                 // Nota: el ajuste de escala en profundidad ya se aplica arriba.
