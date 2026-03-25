@@ -364,6 +364,12 @@
             });
             event.target.classList.add('selected');
         }
+
+        function toggleShirt() {
+            showShirt = !showShirt;
+            if (shirtMesh) {
+                shirtMesh.visible = showShirt;
+            }
         }
 
         function resetDetection() {
