@@ -38,6 +38,15 @@
             height: 100%;
             pointer-events: none;
         }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
         #controls {
             position: absolute;
             top: 20px;
@@ -82,20 +91,22 @@
     <div id="container">
         <video id="video" autoplay muted></video>
         <canvas id="canvas3d"></canvas>
+        <canvas id="overlay"></canvas>
         <div id="controls">
             <h3>Prototipo Camisa Virtual</h3>
             <button onclick="togglePoseDetection()">Iniciar/Detener Detección</button>
             <button onclick="resetDetection()">Reiniciar Detección</button>
+            <button onclick="toggleSkeleton()">Mostrar/Ocultar Esqueleto</button>
             <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
             <div>
                 <label>Color de la camisa:</label>
                 <div class="color-picker">
-                    <div class="color-option selected" style="background-color: #ffffff;" onclick="changeShirtColor(0xffffff)"></div>
-                    <div class="color-option" style="background-color: #ff0000;" onclick="changeShirtColor(0xff0000)"></div>
-                    <div class="color-option" style="background-color: #00ff00;" onclick="changeShirtColor(0x00ff00)"></div>
-                    <div class="color-option" style="background-color: #0000ff;" onclick="changeShirtColor(0x0000ff)"></div>
-                    <div class="color-option" style="background-color: #ffff00;" onclick="changeShirtColor(0xffff00)"></div>
-                    <div class="color-option" style="background-color: #ff00ff;" onclick="changeShirtColor(0xff00ff)"></div>
+                    <div class="color-option selected" style="background-color: #ffffff;" onclick="changeShirtColor(0xffffff, this)"></div>
+                    <div class="color-option" style="background-color: #ff0000;" onclick="changeShirtColor(0xff0000, this)"></div>
+                    <div class="color-option" style="background-color: #00ff00;" onclick="changeShirtColor(0x00ff00, this)"></div>
+                    <div class="color-option" style="background-color: #0000ff;" onclick="changeShirtColor(0x0000ff, this)"></div>
+                    <div class="color-option" style="background-color: #ffff00;" onclick="changeShirtColor(0xffff00, this)"></div>
+                    <div class="color-option" style="background-color: #ff00ff;" onclick="changeShirtColor(0xff00ff, this)"></div>
                 </div>
             </div>
             <p id="status">Estado: Iniciando...</p>
@@ -109,8 +120,10 @@
         let scene, camera3d, renderer;
         let shirtMesh;
         let shirtMaterial;
+        let overlayCanvas, overlayCtx;
         let isDetecting = false;
         let showShirt = true;
+        let showSkeleton = true;
         let currentColor = 0xffffff;
 
         // Inicializar Three.js
@@ -149,6 +162,12 @@
 
                 // Crear camisa básica con geometría personalizada
                 createShirtMesh();
+
+                // Configurar canvas de overlay para esqueleto
+                overlayCanvas = document.getElementById('overlay');
+                overlayCtx = overlayCanvas.getContext('2d');
+                overlayCanvas.width = window.innerWidth;
+                overlayCanvas.height = window.innerHeight;
 
                 // Animar
                 animate();
@@ -282,9 +301,51 @@
 
                 // Actualizar posición de la camisa
                 updateShirtPosition(results.poseLandmarks);
+
+                // Dibujar esqueleto sobre el overlay si está habilitado
+                if (showSkeleton && overlayCtx) {
+                    drawSkeleton(results.poseLandmarks);
+                } else if (overlayCtx) {
+                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                }
             } catch (error) {
                 console.error('Error procesando resultados de pose:', error);
                 document.getElementById('status').textContent = 'Error procesando pose: ' + error.message;
+            }
+        }
+
+        // Dibujar esqueleto 2D en overlay
+        function drawSkeleton(landmarks) {
+            if (!overlayCtx || !overlayCanvas) return;
+
+            const connections = [
+                [11, 12], [11, 23], [12, 24], // hombros-cadera
+                [23, 24], [11, 13], [13, 15], [12, 14], [14, 16], // brazos
+                [23, 25], [25, 27], [24, 26], [26, 28], // piernas
+                [0, 11], [0, 12] // cabeza-hombros
+            ];
+
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            overlayCtx.strokeStyle = 'rgba(0,255,0,0.8)';
+            overlayCtx.lineWidth = 2;
+
+            for (const [i, j] of connections) {
+                const a = landmarks[i];
+                const b = landmarks[j];
+                if (!a || !b) continue;
+                overlayCtx.beginPath();
+                overlayCtx.moveTo(a.x * overlayCanvas.width, a.y * overlayCanvas.height);
+                overlayCtx.lineTo(b.x * overlayCanvas.width, b.y * overlayCanvas.height);
+                overlayCtx.stroke();
+            }
+
+            // Dibujar puntos
+            overlayCtx.fillStyle = 'rgba(255,255,255,0.8)';
+            for (const lm of landmarks) {
+                if (!lm) continue;
+                overlayCtx.beginPath();
+                overlayCtx.arc(lm.x * overlayCanvas.width, lm.y * overlayCanvas.height, 4, 0, Math.PI * 2);
+                overlayCtx.fill();
             }
         }
 
@@ -349,6 +410,10 @@
                     shirtMesh.position.y += neckOffset;
                 }
 
+                // Ajuste de escala en profundidad para compensar acercarse/alejarse
+                const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.65, 2.8);
+                shirtMesh.scale.multiplyScalar(depthFactor);
+
                 // Ajustar mangas basado en codos
                 if (shirtMesh.children.length >= 3) {
                     const leftSleeve = shirtMesh.children[1]; // Manga izquierda
@@ -397,7 +462,15 @@
             }
         }
 
-        function changeShirtColor(color) {
+        function toggleSkeleton() {
+            showSkeleton = !showSkeleton;
+            if (!showSkeleton && overlayCtx) {
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+            }
+            document.getElementById('status').textContent = showSkeleton ? 'Estado: Esqueleto activado' : 'Estado: Esqueleto desactivado';
+        }
+
+        function changeShirtColor(color, element) {
             currentColor = color;
             if (shirtMaterial) {
                 shirtMaterial.color.setHex(color);
@@ -406,7 +479,9 @@
             document.querySelectorAll('.color-option').forEach(option => {
                 option.classList.remove('selected');
             });
-            event.target.classList.add('selected');
+            if (element) {
+                element.classList.add('selected');
+            }
         }
 
         function toggleShirt() {
@@ -458,6 +533,10 @@
                 camera3d.aspect = window.innerWidth / window.innerHeight;
                 camera3d.updateProjectionMatrix();
                 renderer.setSize(window.innerWidth, window.innerHeight);
+                if (overlayCanvas) {
+                    overlayCanvas.width = window.innerWidth;
+                    overlayCanvas.height = window.innerHeight;
+                }
             } catch (error) {
                 console.error('Error en redimensionamiento:', error);
             }
