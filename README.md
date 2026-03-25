@@ -25,7 +25,7 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
    - `const branch = 'main';` si usas otra rama (por defecto 'main').
 3. Sube los cambios a GitHub.
 
-El listado se actualizará automáticamente al cargar la página, obteniendo los archivos .glb de la carpeta `Modelos/` vía la API de GitHub.
+El listado se actualizará automáticamente al cargar la página, obteniendo los archivos .glb de la carpeta `Modelos/` y sus subcarpetas vía la API de GitHub.
 
 ## Estructura del Proyecto
 
