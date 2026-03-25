@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PoseLandmarker + Three.js (Skeleton Rig)</title>
+  <link rel="icon" href="data:,">
   <style>
     body { margin: 0; overflow: hidden; background: #111; color: #fff; font-family: Arial, sans-serif; }
     #ui { position: absolute; top: 8px; left: 8px; z-index: 20; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; }
@@ -23,9 +24,6 @@
 
   <div id="videoContainer"><video id="input_video" autoplay playsinline></video></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
@@ -42,14 +40,16 @@
     }
 
     logUI('Script básico cargado - inicio');
-    // Verificar si THREE está disponible
-    if (typeof THREE === 'undefined') {
-      console.error('THREE.js no está cargado');
-      logUI('THREE.js no está cargado', true);
-    } else {
-      console.log('THREE.js cargado correctamente');
-      logUI('THREE.js cargado correctamente');
-    }
+    console.log('Script básico cargado - inicio');
+  </script>
+
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js';
+
+    console.log('Module imports de Three.js y dependencias listos');
+    console.log('Script pose-to-three.html iniciado correctamente (module)');
 
     window.onerror = function(message, source, lineno, colno, error) {
       console.error('Window error', message, source, lineno, colno, error);
@@ -60,10 +60,7 @@
       console.error('Unhandled rejection', e.reason);
       logUI('Unhandled rejection: ' + (e.reason?.message || e.reason), true);
     };
-  </script>
 
-  <script type="module">
-    console.log('Script pose-to-three.html iniciado correctamente (module)');
     const modelPath = 'https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf'; // Modelo simple de prueba
     const keypointIndices = {
       leftShoulder: 11,
@@ -97,7 +94,7 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      controls = new THREE.OrbitControls(camera3D, renderer.domElement);
+      controls = new OrbitControls(camera3D, renderer.domElement);
       controls.target.set(0, 1, 0);
       controls.update();
 
@@ -115,7 +112,7 @@
       window.addEventListener('resize', onResize);
 
       console.log('Iniciando carga de modelo desde:', modelPath);
-      const loader = new THREE.GLTFLoader();
+      const loader = new GLTFLoader();
       loader.load(modelPath, gltf => {
         console.log('GLTF cargado exitosamente:', gltf);
         console.log('Escena GLTF:', gltf.scene);
@@ -197,12 +194,6 @@
         window.loggedRender = true;
       }
     }
-      // Log inicial para verificar render
-      if (!window.loggedRender) {
-        console.log('Primer render ejecutado. Escena contiene:', scene.children.length, 'objetos');
-        window.loggedRender = true;
-      }
-    }
 
     function getPoint(i) {
       const p = currentLandmarks[i];
@@ -270,9 +261,19 @@
       status.textContent = 'Iniciando cámara...';
       const videoEl = document.getElementById('input_video');
 
+      if (typeof Camera === 'undefined') {
+        const errMsg = 'MediaPipe Camera no está disponible. Revisa que tus scripts de MediaPipe estén cargados.';
+        console.error(errMsg);
+        status.textContent = errMsg;
+        logUI(errMsg, true);
+        return;
+      }
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
-        videoEl.srcObject = stream;
+        if (mpCamera && mpCamera.stop) {
+          console.log('Deteniendo cámara previa antes de iniciar de nuevo');
+          await mpCamera.stop();
+        }
 
         mpCamera = new Camera(videoEl, {
           onFrame: async () => await pose.send({ image: videoEl }),
@@ -281,10 +282,15 @@
         });
 
         await mpCamera.start();
+        videoEl.muted = true;
+        videoEl.play().catch(() => {});
+
         status.textContent = 'Cámara activa. Detectando pose...';
+        logUI('Cámara iniciada correctamente');
       } catch (err) {
-        console.error(err);
-        status.textContent = 'No se pudo iniciar la cámara: ' + err.message;
+        console.error('error al iniciar cámara', err);
+        status.textContent = 'No se pudo iniciar la cámara: ' + (err.message || err);
+        logUI('No se pudo iniciar la cámara: ' + (err.message || err), true);
       }
     });
 
