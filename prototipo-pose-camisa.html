@@ -518,6 +518,13 @@
         function updateShirtPosition(landmarks) {
             if (!shirtMesh || !showShirt) return;
 
+            // Ajustar landmarks con offsets del esqueleto
+            const adjustedLandmarks = landmarks.map((lm, i) => ({
+                x: lm.x + (skeletonOffset[i]?.x || 0),
+                y: lm.y + (skeletonOffset[i]?.y || 0),
+                z: lm.z
+            }));
+
             // Obtener referencias a las partes de la camisa por nombre
             const torso = shirtMesh.getObjectByName('torso');
             const sleeveLeft = shirtMesh.getObjectByName('sleeveLeft');
@@ -525,15 +532,15 @@
             const neck = shirtMesh.getObjectByName('neck');
 
             // Landmarks clave
-            const nose = landmarks[0];
-            const leftShoulder = landmarks[11];
-            const rightShoulder = landmarks[12];
-            const leftElbow = landmarks[13];
-            const rightElbow = landmarks[14];
-            const leftWrist = landmarks[15];
-            const rightWrist = landmarks[16];
-            const leftHip = landmarks[23];
-            const rightHip = landmarks[24];
+            const nose = adjustedLandmarks[0];
+            const leftShoulder = adjustedLandmarks[11];
+            const rightShoulder = adjustedLandmarks[12];
+            const leftElbow = adjustedLandmarks[13];
+            const rightElbow = adjustedLandmarks[14];
+            const leftWrist = adjustedLandmarks[15];
+            const rightWrist = adjustedLandmarks[16];
+            const leftHip = adjustedLandmarks[23];
+            const rightHip = adjustedLandmarks[24];
 
             if (leftShoulder && rightShoulder) {
                 // Calcular centros y dimensiones
@@ -706,6 +713,7 @@
             // Actualizar en tiempo real si hay landmarks
             if (currentLandmarks) {
                 drawSkeleton(currentLandmarks);
+                updateShirtPosition(currentLandmarks);
             }
         }
 
@@ -886,6 +894,8 @@
                 skeletonOffset[draggedIndex].y = normY - dragOffset.y - lm.y;
                 // Redibujar en tiempo real
                 drawSkeleton(currentLandmarks);
+                // Actualizar posición de la camisa
+                updateShirtPosition(currentLandmarks);
             }
         }
 
