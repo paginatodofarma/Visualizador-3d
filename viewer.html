@@ -15,6 +15,7 @@
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r160/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -62,8 +63,11 @@
                 const box = new THREE.Box3().setFromObject(gltf.scene);
                 const center = box.getCenter(new THREE.Vector3());
                 gltf.scene.position.sub(center);
-                camera.position.set(0, 0, box.getSize(new THREE.Vector3()).length());
+                // Set camera to look at the center
+                camera.position.set(0, 0, 5);
                 camera.lookAt(0, 0, 0);
+                controls.target.set(0, 0, 0);
+                controls.update();
             }, function(progress) {
                 console.log('Loading progress:', progress);
             }, function(error) {
@@ -71,22 +75,15 @@
             });
 
             // Controls
-            const controls = { isMouseDown: false, mouseX: 0, mouseY: 0 };
-            document.addEventListener('mousedown', (e) => { controls.isMouseDown = true; controls.mouseX = e.clientX; controls.mouseY = e.clientY; });
-            document.addEventListener('mouseup', () => controls.isMouseDown = false);
-            document.addEventListener('mousemove', (e) => {
-                if (controls.isMouseDown) {
-                    const deltaX = e.clientX - controls.mouseX;
-                    const deltaY = e.clientY - controls.mouseY;
-                    camera.rotation.y += deltaX * 0.01;
-                    camera.rotation.x += deltaY * 0.01;
-                    controls.mouseX = e.clientX;
-                    controls.mouseY = e.clientY;
-                }
-            });
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.enablePan = true;
 
             function animate() {
                 requestAnimationFrame(animate);
+                controls.update();
                 renderer.render(scene, camera);
             }
             animate();

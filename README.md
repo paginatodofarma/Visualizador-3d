@@ -4,7 +4,7 @@ Este proyecto es un visualizador web para modelos 3D en formato GLB, compatible 
 
 ## Características
 
-- **Visualización 3D Normal**: Usa Three.js para renderizar modelos en el navegador.
+- **Visualización 3D Normal**: Usa Three.js para renderizar modelos con controles de órbita (rotar, zoom, pan).
 - **Modo AR**: Usa AR.js para experiencia de Realidad Aumentada en dispositivos móviles.
 - **Modelos**: Los archivos GLB se almacenan en la carpeta `Modelos/`.
 
