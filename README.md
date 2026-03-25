@@ -57,15 +57,21 @@ Este proyecto incluye un prototipo experimental (`prototipo-pose-camisa.html`) q
 4. La camisa 3D azul se posicionará automáticamente sobre tu torso.
 5. Usa "Mostrar/Ocultar Camisa" para alternar la visibilidad.
 
+### Características del prototipo:
+- **Modelo 3D personalizado:** Camisa con torso, mangas y cuello usando geometrías Three.js.
+- **Alineación refinada:** Usa múltiples landmarks (hombros, codos, caderas, rodillas) para mejor posicionamiento.
+- **Selector de colores:** 6 colores disponibles para personalizar la camisa.
+- **Ajuste automático:** La camisa se escala y rota según la pose detectada.
+
 ### Tecnologías:
 - **MediaPipe Pose:** Detecta 33 landmarks corporales en tiempo real.
 - **Three.js:** Renderiza la camisa 3D y la superpone sobre el video.
 - **Webcam:** Captura video en vivo para análisis de pose.
 
 ### Limitaciones actuales:
-- Modelo de camisa básico (cubo azul).
-- Alineación simplificada basada en hombros y caderas.
-- Requiere buena iluminación y pose frontal.
+- Modelo de camisa geométrico (no GLB real).
+- Alineación funciona mejor con poses frontales.
+- Requiere buena iluminación.
 
 ### Próximos pasos:
 - Integrar modelos GLB reales de ropa.

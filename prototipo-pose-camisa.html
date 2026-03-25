@@ -42,11 +42,27 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             color: white;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 15px;
+            border-radius: 8px;
             z-index: 100;
+            max-width: 300px;
+        }
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+        }
+        .color-option.selected {
+            border: 3px solid #007bff;
         }
         button {
             margin: 5px;
@@ -70,6 +86,17 @@
             <h3>Prototipo Camisa Virtual</h3>
             <button onclick="togglePoseDetection()">Iniciar/Detener Detección</button>
             <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
+            <div>
+                <label>Color de la camisa:</label>
+                <div class="color-picker">
+                    <div class="color-option selected" style="background-color: #ffffff;" onclick="changeShirtColor(0xffffff)"></div>
+                    <div class="color-option" style="background-color: #ff0000;" onclick="changeShirtColor(0xff0000)"></div>
+                    <div class="color-option" style="background-color: #00ff00;" onclick="changeShirtColor(0x00ff00)"></div>
+                    <div class="color-option" style="background-color: #0000ff;" onclick="changeShirtColor(0x0000ff)"></div>
+                    <div class="color-option" style="background-color: #ffff00;" onclick="changeShirtColor(0xffff00)"></div>
+                    <div class="color-option" style="background-color: #ff00ff;" onclick="changeShirtColor(0xff00ff)"></div>
+                </div>
+            </div>
             <p id="status">Estado: Iniciando...</p>
         </div>
     </div>
@@ -80,8 +107,10 @@
         let camera;
         let scene, camera3d, renderer;
         let shirtMesh;
+        let shirtMaterial;
         let isDetecting = false;
         let showShirt = true;
+        let currentColor = 0xffffff;
 
         // Inicializar Three.js
         function initThreeJS() {
@@ -104,12 +133,45 @@
             directionalLight.position.set(0, 1, 1);
             scene.add(directionalLight);
 
-            // Crear camisa básica (cubo azul por ahora)
-            const geometry = new THREE.BoxGeometry(1, 1.2, 0.1);
-            const material = new THREE.MeshLambertMaterial({ color: 0x0088ff, transparent: true, opacity: 0.7 });
-            shirtMesh = new THREE.Mesh(geometry, material);
+        // Crear camisa básica con geometría personalizada
+        function createShirtMesh() {
+            shirtMesh = new THREE.Group();
+
+            // Material de la camisa
+            shirtMaterial = new THREE.MeshLambertMaterial({
+                color: currentColor,
+                transparent: true,
+                opacity: 0.8,
+                side: THREE.DoubleSide
+            });
+
+            // Torso (rectángulo principal)
+            const torsoGeometry = new THREE.PlaneGeometry(1, 1.2);
+            const torso = new THREE.Mesh(torsoGeometry, shirtMaterial);
+            torso.position.z = 0.01; // Delante del cuerpo
+            shirtMesh.add(torso);
+
+            // Manga izquierda
+            const sleeveLeftGeometry = new THREE.PlaneGeometry(0.3, 0.6);
+            const sleeveLeft = new THREE.Mesh(sleeveLeftGeometry, shirtMaterial);
+            sleeveLeft.position.set(-0.5, 0.2, 0.01);
+            shirtMesh.add(sleeveLeft);
+
+            // Manga derecha
+            const sleeveRightGeometry = new THREE.PlaneGeometry(0.3, 0.6);
+            const sleeveRight = new THREE.Mesh(sleeveRightGeometry, shirtMaterial);
+            sleeveRight.position.set(0.5, 0.2, 0.01);
+            shirtMesh.add(sleeveRight);
+
+            // Cuello (óvalo simple)
+            const neckGeometry = new THREE.CircleGeometry(0.15, 8);
+            const neck = new THREE.Mesh(neckGeometry, shirtMaterial);
+            neck.position.set(0, 0.5, 0.01);
+            shirtMesh.add(neck);
+
             shirtMesh.visible = showShirt;
             scene.add(shirtMesh);
+        }
 
             // Animar
             animate();
@@ -161,33 +223,78 @@
         function updateShirtPosition(landmarks) {
             if (!shirtMesh || !showShirt) return;
 
-            // Obtener posiciones de hombros y caderas
-            const leftShoulder = landmarks[11]; // hombro izquierdo
-            const rightShoulder = landmarks[12]; // hombro derecho
-            const leftHip = landmarks[23]; // cadera izquierda
-            const rightHip = landmarks[24]; // cadera derecha
+            // Landmarks clave para alineación
+            const nose = landmarks[0];
+            const leftShoulder = landmarks[11];
+            const rightShoulder = landmarks[12];
+            const leftElbow = landmarks[13];
+            const rightElbow = landmarks[14];
+            const leftHip = landmarks[23];
+            const rightHip = landmarks[24];
+            const leftKnee = landmarks[25];
+            const rightKnee = landmarks[26];
 
             if (leftShoulder && rightShoulder && leftHip && rightHip) {
-                // Calcular centro del torso
-                const centerX = (leftShoulder.x + rightShoulder.x) / 2;
-                const centerY = (leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4;
-                const centerZ = (leftShoulder.z + rightShoulder.z) / 2;
+                // Calcular dimensiones del torso
+                const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
+                const shoulderCenterY = (leftShoulder.y + rightShoulder.y) / 2;
+                const hipCenterX = (leftHip.x + rightHip.x) / 2;
+                const hipCenterY = (leftHip.y + rightHip.y) / 2;
 
-                // Calcular ancho y alto del torso
-                const torsoWidth = Math.abs(rightShoulder.x - leftShoulder.x);
-                const torsoHeight = Math.abs((leftShoulder.y + rightShoulder.y) / 2 - (leftHip.y + rightHip.y) / 2);
+                // Ancho de hombros
+                const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x);
+                // Alto del torso (hombros a caderas)
+                const torsoHeight = Math.abs(shoulderCenterY - hipCenterY);
+                // Ancho de caderas
+                const hipWidth = Math.abs(rightHip.x - leftHip.x);
 
-                // Escalar y posicionar la camisa
-                shirtMesh.scale.set(torsoWidth * 3, torsoHeight * 3, 0.1);
+                // Centro del torso
+                const torsoCenterX = (shoulderCenterX + hipCenterX) / 2;
+                const torsoCenterY = (shoulderCenterY + hipCenterY) / 2;
 
-                // Convertir coordenadas normalizadas a espacio 3D
-                shirtMesh.position.x = (centerX - 0.5) * 4; // Ajustar escala
-                shirtMesh.position.y = -(centerY - 0.5) * 3; // Invertir Y y ajustar
-                shirtMesh.position.z = centerZ * 2;
+                // Profundidad Z promedio
+                const avgZ = (leftShoulder.z + rightShoulder.z + leftHip.z + rightHip.z) / 4;
 
-                // Rotación básica (simplificada)
+                // Escalar la camisa
+                const scaleX = shoulderWidth * 2.5; // Un poco más ancho que los hombros
+                const scaleY = torsoHeight * 2.2; // Altura del torso
+                shirtMesh.scale.set(scaleX, scaleY, 1);
+
+                // Posicionar la camisa
+                shirtMesh.position.x = (torsoCenterX - 0.5) * 6; // Ajustar escala horizontal
+                shirtMesh.position.y = -(torsoCenterY - 0.5) * 4; // Invertir Y y ajustar
+                shirtMesh.position.z = avgZ * 3;
+
+                // Calcular rotación basada en hombros
                 const shoulderAngle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
                 shirtMesh.rotation.z = shoulderAngle;
+
+                // Ajustar inclinación basada en caderas
+                const hipAngle = Math.atan2(rightHip.y - leftHip.y, rightHip.x - leftHip.x);
+                const torsoTilt = (shoulderAngle + hipAngle) / 2;
+                shirtMesh.rotation.z = torsoTilt;
+
+                // Ajustar posición Y para que el cuello esté en el nivel correcto
+                if (nose) {
+                    const neckOffset = (nose.y - shoulderCenterY) * 2;
+                    shirtMesh.position.y += neckOffset;
+                }
+
+                // Ajustar mangas basado en codos
+                if (shirtMesh.children.length >= 3) {
+                    const leftSleeve = shirtMesh.children[1]; // Manga izquierda
+                    const rightSleeve = shirtMesh.children[2]; // Manga derecha
+
+                    if (leftElbow) {
+                        leftSleeve.position.x = (leftShoulder.x - torsoCenterX) * scaleX;
+                        leftSleeve.position.y = (leftShoulder.y - torsoCenterY) * scaleY * 0.5;
+                    }
+
+                    if (rightElbow) {
+                        rightSleeve.position.x = (rightShoulder.x - torsoCenterX) * scaleX;
+                        rightSleeve.position.y = (rightShoulder.y - torsoCenterY) * scaleY * 0.5;
+                    }
+                }
             }
         }
 
@@ -202,11 +309,16 @@
             }
         }
 
-        function toggleShirt() {
-            showShirt = !showShirt;
-            if (shirtMesh) {
-                shirtMesh.visible = showShirt;
+        function changeShirtColor(color) {
+            currentColor = color;
+            if (shirtMaterial) {
+                shirtMaterial.color.setHex(color);
             }
+            // Actualizar selección visual
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
         }
 
         // Inicializar todo
