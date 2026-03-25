@@ -68,12 +68,21 @@ Este proyecto incluye un prototipo experimental (`prototipo-pose-camisa.html`) q
 - **Three.js:** Renderiza la camisa 3D y la superpone sobre el video.
 - **Webcam:** Captura video en vivo para análisis de pose.
 
-### Limitaciones actuales:
-- Modelo de camisa geométrico (no GLB real).
-- Alineación funciona mejor con poses frontales.
-- Requiere buena iluminación.
+### Mejoras recientes (v1.1):
+- **Manejo robusto de errores:** Verificación de WebGL, null checks para camera3d/renderer, try-catch en funciones críticas.
+- **Compatibilidad mejorada:** Detección automática de soporte WebGL, mensajes de error informativos.
+- **Función de reinicio:** Botón para reiniciar la detección de pose y resetear posiciones.
+- **Umbrales de detección reducidos:** De 0.5 a 0.3 para mejor detección en condiciones variables.
+- **Indicadores visuales:** Estado de detección en tiempo real, logging mejorado para debugging.
+- **Manejo de resize mejorado:** Verificación de objetos antes de actualizar.
 
-### Próximos pasos:
-- Integrar modelos GLB reales de ropa.
-- Mejorar el rigging y deformación de tela.
-- Agregar más prendas y opciones de personalización.
+### Requisitos del navegador:
+- **WebGL:** Requerido para renderizado 3D (soporte en Chrome 51+, Firefox 45+, Safari 10+).
+- **Webcam:** Para captura de video en vivo.
+- **HTTPS:** Recomendado para acceso a webcam (GitHub Pages lo proporciona automáticamente).
+
+### Solución de problemas:
+- **"WebGL no soportado":** Actualiza tu navegador o usa uno compatible.
+- **"Canvas 3D no encontrado":** Asegúrate de que el archivo se carga completamente.
+- **Detección fallida:** Mejora la iluminación, reduce el umbral o reinicia la detección.
+- **Errores de redimensionamiento:** Evitados con verificaciones robustas.

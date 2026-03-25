@@ -85,6 +85,7 @@
         <div id="controls">
             <h3>Prototipo Camisa Virtual</h3>
             <button onclick="togglePoseDetection()">Iniciar/Detener Detección</button>
+            <button onclick="resetDetection()">Reiniciar Detección</button>
             <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
             <div>
                 <label>Color de la camisa:</label>
@@ -114,24 +115,50 @@
 
         // Inicializar Three.js
         function initThreeJS() {
-            // Escena
-            scene = new THREE.Scene();
+            try {
+                // Verificar que el canvas existe
+                const canvas = document.getElementById('canvas3d');
+                if (!canvas) {
+                    throw new Error('Canvas 3D no encontrado');
+                }
 
-            // Cámara
-            camera3d = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera3d.position.z = 5;
+                // Verificar WebGL
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (!gl) {
+                    throw new Error('WebGL no está soportado en este dispositivo');
+                }
 
-            // Renderer
-            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas3d'), alpha: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setClearColor(0x000000, 0); // Fondo transparente
+                // Escena
+                scene = new THREE.Scene();
 
-            // Luz
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(0, 1, 1);
-            scene.add(directionalLight);
+                // Cámara
+                camera3d = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera3d.position.z = 5;
+
+                // Renderer
+                renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x000000, 0); // Fondo transparente
+
+                // Luz
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(0, 1, 1);
+                scene.add(directionalLight);
+
+                // Crear camisa básica con geometría personalizada
+                createShirtMesh();
+
+                // Animar
+                animate();
+
+                console.log('Three.js inicializado correctamente');
+            } catch (error) {
+                console.error('Error inicializando Three.js:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message + '. Intenta en otro navegador.';
+            }
+        }
 
         // Crear camisa básica con geometría personalizada
         function createShirtMesh() {
@@ -173,10 +200,6 @@
             scene.add(shirtMesh);
         }
 
-            // Animar
-            animate();
-        }
-
         function animate() {
             requestAnimationFrame(animate);
             renderer.render(scene, camera3d);
@@ -195,8 +218,8 @@
                 smoothLandmarks: true,
                 enableSegmentation: false,
                 smoothSegmentation: false,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
+                minDetectionConfidence: 0.3, // Reducido para mejor detección
+                minTrackingConfidence: 0.3   // Reducido para mejor tracking
             });
 
             pose.onResults(onResults);
@@ -212,11 +235,32 @@
             });
         }
 
+        let detectionStatus = false;
+
         // Procesar resultados de pose
         function onResults(results) {
-            if (!results.poseLandmarks) return;
+            try {
+                if (!results.poseLandmarks) {
+                    if (detectionStatus) {
+                        detectionStatus = false;
+                        document.getElementById('status').textContent = 'Estado: Pose no detectada';
+                        console.log('Pose perdida');
+                    }
+                    return;
+                }
 
-            updateShirtPosition(results.poseLandmarks);
+                if (!detectionStatus) {
+                    detectionStatus = true;
+                    document.getElementById('status').textContent = 'Estado: Pose detectada ✓';
+                    console.log('Pose detectada');
+                }
+
+                // Actualizar posición de la camisa
+                updateShirtPosition(results.poseLandmarks);
+            } catch (error) {
+                console.error('Error procesando resultados de pose:', error);
+                document.getElementById('status').textContent = 'Error procesando pose: ' + error.message;
+            }
         }
 
         // Actualizar posición de la camisa basada en landmarks
@@ -320,6 +364,23 @@
             });
             event.target.classList.add('selected');
         }
+        }
+
+        function resetDetection() {
+            if (camera) {
+                camera.stop();
+            }
+            if (pose) {
+                pose.close();
+            }
+            isDetecting = false;
+            detectionStatus = false;
+            document.getElementById('status').textContent = 'Estado: Reiniciando...';
+            setTimeout(() => {
+                initPose();
+                document.getElementById('status').textContent = 'Estado: Listo para iniciar detección';
+            }, 1000);
+        }
 
         // Inicializar todo
         window.onload = function() {
@@ -330,9 +391,15 @@
 
         // Manejar resize
         window.addEventListener('resize', () => {
-            camera3d.aspect = window.innerWidth / window.innerHeight;
-            camera3d.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (!camera3d || !renderer) return;
+
+            try {
+                camera3d.aspect = window.innerWidth / window.innerHeight;
+                camera3d.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            } catch (error) {
+                console.error('Error en redimensionamiento:', error);
+            }
         });
     </script>
 </body>
