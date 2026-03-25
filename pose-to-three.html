@@ -170,7 +170,6 @@
         console.error('Stack:', error.stack);
         status.textContent = 'Error cargando modelo: ' + error.message;
       });
-      });
 
       animate();
     }
@@ -184,10 +183,20 @@
 
     function animate() {
       requestAnimationFrame(animate);
+      if (!scene || !camera3D || !renderer) {
+        // aún no inicializado, espera
+        return;
+      }
       if (rig && currentLandmarks) {
         applyPoseToRig(currentLandmarks);
       }
       renderer.render(scene, camera3D);
+      if (!window.loggedRender) {
+        console.log('Primer render ejecutado. Escena con', scene.children.length, 'objetos');
+        logUI('Primer render ejecutado. Escena con ' + scene.children.length + ' objetos');
+        window.loggedRender = true;
+      }
+    }
       // Log inicial para verificar render
       if (!window.loggedRender) {
         console.log('Primer render ejecutado. Escena contiene:', scene.children.length, 'objetos');
