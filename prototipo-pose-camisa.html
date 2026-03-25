@@ -134,13 +134,14 @@
             <button onclick="resetDetection()">Reiniciar Detección</button>
             <button onclick="toggleSkeleton()">Mostrar/Ocultar Esqueleto</button>
             <button onclick="toggleShirt()">Mostrar/Ocultar Camisa</button>
+            <label><input type="checkbox" id="dragShirtMode"> Modo Arrastrar Camisa</label>
             <button onclick="showCalibration()">Mostrar Configuraciones</button>
             <button onclick="copyConfig()">Copiar Configuración</button>
             <div>
                 <label>Color de la camisa:</label>
                 <div class="color-picker">
-                    <div class="color-option selected" style="background-color: #ffffff;" onclick="changeShirtColor(0xffffff, this)"></div>
-                    <div class="color-option" style="background-color: #ff0000;" onclick="changeShirtColor(0xff0000, this)"></div>
+                    <div class="color-option selected" style="background-color: #ff0000;" onclick="changeShirtColor(0xff0000, this)"></div>
+                    <div class="color-option" style="background-color: #ffffff;" onclick="changeShirtColor(0xffffff, this)"></div>
                     <div class="color-option" style="background-color: #00ff00;" onclick="changeShirtColor(0x00ff00, this)"></div>
                     <div class="color-option" style="background-color: #0000ff;" onclick="changeShirtColor(0x0000ff, this)"></div>
                     <div class="color-option" style="background-color: #ffff00;" onclick="changeShirtColor(0xffff00, this)"></div>
@@ -150,6 +151,7 @@
             <div>
                 <label>Cargar Imagen para Detección:</label>
                 <input type="file" id="imageInput" accept="image/*" onchange="loadImage(event)">
+                <button onclick="processImagePose()">Procesar Imagen</button>
                 <button onclick="switchToVideo()">Volver a Video</button>
             </div>
             <details>
@@ -213,7 +215,7 @@
         let isDetecting = false;
         let showShirt = true;
         let showSkeleton = true;
-        let currentColor = 0xffffff;
+        let currentColor = 0xff0000;
 
         // Calibración
         let calibration = {
@@ -239,6 +241,16 @@
             15: { x: 0, y: 0 }, // left wrist
             16: { x: 0, y: 0 }  // right wrist
         };
+
+        // Variables para drag del esqueleto
+        let currentLandmarks = null;
+        let isDragging = false;
+        let draggedIndex = -1;
+        let dragOffset = {x: 0, y: 0};
+        // Variables para drag de la camisa
+        let dragShirt = false;
+        let prevMouseX = 0;
+        let prevMouseY = 0;
         // Inicializar Three.js
         function initThreeJS() {
             try {
@@ -296,11 +308,11 @@
         function createShirtMesh() {
             shirtMesh = new THREE.Group();
 
-            // Material de la camisa
+        // Material de la camisa
             shirtMaterial = new THREE.MeshLambertMaterial({
                 color: currentColor,
                 transparent: true,
-                opacity: 0.8,
+                opacity: 1,
                 side: THREE.DoubleSide
             });
 
@@ -419,6 +431,9 @@
                     console.log('Pose detectada');
                 }
 
+                // Guardar landmarks actuales para drag
+                currentLandmarks = results.poseLandmarks;
+
                 // Actualizar posición de la camisa
                 updateShirtPosition(results.poseLandmarks);
 
@@ -488,7 +503,9 @@
                 const ly = (lm.y + (skeletonOffset[index]?.y || 0)) * scaleY + offsetY;
                 overlayCtx.beginPath();
                 overlayCtx.arc(lx, ly, 4, 0, Math.PI * 2);
+                overlayCtx.fillStyle = (draggedIndex === index) ? 'rgba(255,0,0,0.9)' : 'rgba(255,255,255,0.8)';
                 overlayCtx.fill();
+                overlayCtx.fillStyle = 'rgba(255,255,255,0.8)';
                 if (skeletonOffset[index]) {
                     overlayCtx.fillStyle = 'rgba(255,0,0,0.9)';
                     overlayCtx.fillText(index, lx, ly + 5);
@@ -518,18 +535,29 @@
             const leftHip = landmarks[23];
             const rightHip = landmarks[24];
 
-            if (leftShoulder && rightShoulder && leftHip && rightHip) {
+            if (leftShoulder && rightShoulder) {
                 // Calcular centros y dimensiones
                 const shoulderCenterX = (leftShoulder.x + rightShoulder.x) / 2;
                 const shoulderCenterY = (leftShoulder.y + rightShoulder.y) / 2;
-                const hipCenterX = (leftHip.x + rightHip.x) / 2;
-                const hipCenterY = (leftHip.y + rightHip.y) / 2;
+                let hipCenterX, hipCenterY;
+                if (leftHip && rightHip) {
+                    hipCenterX = (leftHip.x + rightHip.x) / 2;
+                    hipCenterY = (leftHip.y + rightHip.y) / 2;
+                } else {
+                    hipCenterX = shoulderCenterX;
+                    hipCenterY = shoulderCenterY + 0.3; // estimar hips abajo
+                }
                 const torsoCenterX = (shoulderCenterX + hipCenterX) / 2;
                 const torsoCenterY = (shoulderCenterY + hipCenterY) / 2;
 
                 const shoulderWidth = Math.abs(rightShoulder.x - leftShoulder.x);
                 const torsoHeight = Math.abs(shoulderCenterY - hipCenterY);
-                const avgZ = (leftShoulder.z + rightShoulder.z + leftHip.z + rightHip.z) / 4;
+                let avgZ;
+                if (leftHip && rightHip) {
+                    avgZ = (leftShoulder.z + rightShoulder.z + leftHip.z + rightHip.z) / 4;
+                } else {
+                    avgZ = (leftShoulder.z + rightShoulder.z) / 2;
+                }
 
                 // Profundidad y escala global
                 const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2);
@@ -781,10 +809,90 @@
             }
         }
 
+        // Funciones para drag del esqueleto
+        function onMouseDown(event) {
+            if (!currentLandmarks) return;
+            const rect = overlayCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const sourceElement = useImage ? document.getElementById('image') : document.getElementById('video');
+            const sourceRect = sourceElement.getBoundingClientRect();
+            const scaleX = sourceRect.width;
+            const scaleY = sourceRect.height;
+            const offsetX = sourceRect.left;
+            const offsetY = sourceRect.top;
+            const normX = (mouseX - offsetX) / scaleX;
+            const normY = (mouseY - offsetY) / scaleY;
+            for (let i = 0; i < currentLandmarks.length; i++) {
+                const lm = currentLandmarks[i];
+                if (!lm) continue;
+                const lx = (lm.x + (skeletonOffset[i]?.x || 0)) * scaleX + offsetX;
+                const ly = (lm.y + (skeletonOffset[i]?.y || 0)) * scaleY + offsetY;
+                if (Math.abs(mouseX - lx) < 10 && Math.abs(mouseY - ly) < 10) {
+                    isDragging = true;
+                    draggedIndex = i;
+                    dragOffset.x = normX - (lm.x + (skeletonOffset[i]?.x || 0));
+                    dragOffset.y = normY - (lm.y + (skeletonOffset[i]?.y || 0));
+                    return;
+                }
+            }
+            // Si no se arrastró esqueleto y modo drag camisa activado
+            if (document.getElementById('dragShirtMode').checked && shirtMesh) {
+                dragShirt = true;
+                prevMouseX = mouseX;
+                prevMouseY = mouseY;
+            }
+        }
+
+        function onMouseMove(event) {
+            if (!isDragging || draggedIndex === -1 || !currentLandmarks) {
+                if (dragShirt && shirtMesh) {
+                    const rect = overlayCanvas.getBoundingClientRect();
+                    const mouseX = event.clientX - rect.left;
+                    const mouseY = event.clientY - rect.top;
+                    const dx = (mouseX - prevMouseX) * 0.01;
+                    const dy = (mouseY - prevMouseY) * 0.01;
+                    shirtMesh.position.x += dx;
+                    shirtMesh.position.y -= dy;
+                    prevMouseX = mouseX;
+                    prevMouseY = mouseY;
+                }
+                return;
+            }
+            const rect = overlayCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            const sourceElement = useImage ? document.getElementById('image') : document.getElementById('video');
+            const sourceRect = sourceElement.getBoundingClientRect();
+            const scaleX = sourceRect.width;
+            const scaleY = sourceRect.height;
+            const offsetX = sourceRect.left;
+            const offsetY = sourceRect.top;
+            const normX = (mouseX - offsetX) / scaleX;
+            const normY = (mouseY - offsetY) / scaleY;
+            const lm = currentLandmarks[draggedIndex];
+            if (lm) {
+                if (!skeletonOffset[draggedIndex]) skeletonOffset[draggedIndex] = {x: 0, y: 0};
+                skeletonOffset[draggedIndex].x = normX - dragOffset.x - lm.x;
+                skeletonOffset[draggedIndex].y = normY - dragOffset.y - lm.y;
+            }
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+            draggedIndex = -1;
+            dragShirt = false;
+        }
+
         // Inicializar todo
         window.onload = function() {
             initThreeJS();
             initPose();
+            // Agregar event listeners para drag del esqueleto
+            overlayCanvas.addEventListener('mousedown', onMouseDown);
+            overlayCanvas.addEventListener('mousemove', onMouseMove);
+            overlayCanvas.addEventListener('mouseup', onMouseUp);
+            overlayCanvas.addEventListener('mouseleave', () => { isDragging = false; draggedIndex = -1; dragShirt = false; });
             document.getElementById('status').textContent = 'Estado: Listo. Haz clic en "Iniciar Detección"';
         };
 
