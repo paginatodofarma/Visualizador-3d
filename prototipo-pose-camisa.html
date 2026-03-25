@@ -360,7 +360,7 @@
         // Procesar resultados de pose
         function onResults(results) {
             try {
-                if (!results.poseLandmarks) {
+                if (!results || !results.poseLandmarks) {
                     if (detectionStatus) {
                         detectionStatus = false;
                         document.getElementById('status').textContent = 'Estado: Pose no detectada';
@@ -394,12 +394,14 @@
         function drawSkeleton(landmarks) {
             if (!overlayCtx || !overlayCanvas) return;
 
-            const video = document.getElementById('video');
-            const videoRect = video.getBoundingClientRect();
-            const scaleX = videoRect.width;
-            const scaleY = videoRect.height;
-            const offsetX = videoRect.left;
-            const offsetY = videoRect.top;
+            const sourceElement = useImage ? document.getElementById('image') : document.getElementById('video');
+            if (!sourceElement) return;
+
+            const sourceRect = sourceElement.getBoundingClientRect();
+            const scaleX = sourceRect.width;
+            const scaleY = sourceRect.height;
+            const offsetX = sourceRect.left;
+            const offsetY = sourceRect.top;
 
             const connections = [
                 [0, 1], [1, 2], [2, 3], [3, 7], // cara
@@ -636,8 +638,8 @@
             if (!pose || !currentImage || !poseReady || poseBusy) return;
             poseBusy = true;
             try {
-                const results = await pose.send({ image: currentImage });
-                onResults(results);
+                await pose.send({ image: currentImage });
+                // onResults se ejecuta automáticamente cuando llega la predicción
             } catch (error) {
                 console.error('Error procesando imagen:', error);
             } finally {
