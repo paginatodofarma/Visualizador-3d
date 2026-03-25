@@ -194,14 +194,18 @@
 
             Object.keys(mapped).forEach(key => {
                 const p = mapped[key];
+                if (!joints[key]) return;
                 joints[key].position.set(p.x, p.y, 0.03);
                 joints[key].visible = true;
             });
 
             // Actualizar líneas del skeleton en Three.js
             bones.forEach(b => {
-                const p1 = joints[b.from].position;
-                const p2 = joints[b.to].position;
+                const jointFrom = joints[b.from];
+                const jointTo = joints[b.to];
+                if (!jointFrom || !jointTo) return;
+                const p1 = jointFrom.position;
+                const p2 = jointTo.position;
                 b.line.geometry.setFromPoints([p1, p2]);
                 b.line.geometry.attributes.position.needsUpdate = true;
             });
@@ -245,53 +249,6 @@
             rightLeg.scale.set(1, Math.max(rightLegLength / 0.3, 0.1), 1);
             rightLeg.position.set((rh.x + ra2.x) / 2, (rh.y + ra2.y) / 2, 0.015);
             rightLeg.rotation.z = Math.atan2(ra2.y - rh.y, ra2.x - rh.x) - Math.PI / 2;
-        }
-
-            // Torso: entre hombros y caderas
-            const leftShoulder = toThreeJS(landmarks[11].x, landmarks[11].y);
-            const rightShoulder = toThreeJS(landmarks[12].x, landmarks[12].y);
-            const leftHip = toThreeJS(landmarks[23].x, landmarks[23].y);
-            const rightHip = toThreeJS(landmarks[24].x, landmarks[24].y);
-
-            const torsoX = (leftShoulder.x + rightShoulder.x + leftHip.x + rightHip.x) / 4;
-            const torsoY = (leftShoulder.y + rightShoulder.y + leftHip.y + rightHip.y) / 4;
-            torso.position.set(torsoX, torsoY, 0);
-
-            // Brazos
-            const leftElbow = toThreeJS(landmarks[13].x, landmarks[13].y);
-            const rightElbow = toThreeJS(landmarks[14].x, landmarks[14].y);
-            const leftWrist = toThreeJS(landmarks[15].x, landmarks[15].y);
-            const rightWrist = toThreeJS(landmarks[16].x, landmarks[16].y);
-
-            // Brazo izquierdo: hombro a muñeca
-            const leftArmLength = Math.sqrt((leftWrist.x - leftShoulder.x)**2 + (leftWrist.y - leftShoulder.y)**2);
-            leftArm.scale.y = leftArmLength / 0.2; // Escalar longitud
-            leftArm.position.set((leftShoulder.x + leftWrist.x)/2, (leftShoulder.y + leftWrist.y)/2, 0);
-            leftArm.rotation.z = Math.atan2(leftWrist.y - leftShoulder.y, leftWrist.x - leftShoulder.x) - Math.PI/2;
-
-            // Brazo derecho
-            const rightArmLength = Math.sqrt((rightWrist.x - rightShoulder.x)**2 + (rightWrist.y - rightShoulder.y)**2);
-            rightArm.scale.y = rightArmLength / 0.2;
-            rightArm.position.set((rightShoulder.x + rightWrist.x)/2, (rightShoulder.y + rightWrist.y)/2, 0);
-            rightArm.rotation.z = Math.atan2(rightWrist.y - rightShoulder.y, rightWrist.x - rightShoulder.x) - Math.PI/2;
-
-            // Piernas
-            const leftKnee = toThreeJS(landmarks[25].x, landmarks[25].y);
-            const rightKnee = toThreeJS(landmarks[26].x, landmarks[26].y);
-            const leftAnkle = toThreeJS(landmarks[27].x, landmarks[27].y);
-            const rightAnkle = toThreeJS(landmarks[28].x, landmarks[28].y);
-
-            // Pierna izquierda: cadera a tobillo
-            const leftLegLength = Math.sqrt((leftAnkle.x - leftHip.x)**2 + (leftAnkle.y - leftHip.y)**2);
-            leftLeg.scale.y = leftLegLength / 0.3;
-            leftLeg.position.set((leftHip.x + leftAnkle.x)/2, (leftHip.y + leftAnkle.y)/2, 0);
-            leftLeg.rotation.z = Math.atan2(leftAnkle.y - leftHip.y, leftAnkle.x - leftHip.x) - Math.PI/2;
-
-            // Pierna derecha
-            const rightLegLength = Math.sqrt((rightAnkle.x - rightHip.x)**2 + (rightAnkle.y - rightHip.y)**2);
-            rightLeg.scale.y = rightLegLength / 0.3;
-            rightLeg.position.set((rightHip.x + rightAnkle.x)/2, (rightHip.y + rightAnkle.y)/2, 0);
-            rightLeg.rotation.z = Math.atan2(rightAnkle.y - rightHip.y, rightAnkle.x - rightHip.x) - Math.PI/2;
         }
 
         async function initPose() {
