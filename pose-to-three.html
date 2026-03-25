@@ -257,9 +257,56 @@
       }
     });
 
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+
+    function setButtonState(isRunning) {
+      btnStart.disabled = isRunning;
+      btnStop.disabled = !isRunning;
+    }
+
+    setButtonState(false);
+
     document.getElementById('btnStart').addEventListener('click', async () => {
       status.textContent = 'Iniciando cámara...';
       const videoEl = document.getElementById('input_video');
+      setButtonState(true);
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errMsg = 'Tu navegador no soporta navigator.mediaDevices.getUserMedia';
+        console.error(errMsg);
+        status.textContent = errMsg;
+        logUI(errMsg, true);
+        setButtonState(false);
+        return;
+      }
+
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const perm = await navigator.permissions.query({ name: 'camera' }).catch(() => null);
+          if (perm) {
+            logUI('Estado permiso cámara: ' + perm.state);
+            perm.onchange = () => logUI('Cambio permiso cámara: ' + perm.state);
+          }
+        }
+      } catch (permErr) {
+        console.warn('No se pudo leer estado de permisos:', permErr);
+      }
+
+      // Primero forzar petición de permiso nativo (show prompt)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+        videoEl.srcObject = stream;
+        await videoEl.play();
+        logUI('Permiso de cámara concedido y streamstarted con getUserMedia');
+      } catch (err) {
+        console.error('getUserMedia fallo:', err);
+        const msg = 'No se pudo obtener stream con getUserMedia: ' + (err.name || err.message || err);
+        status.textContent = msg;
+        logUI(msg, true);
+        setButtonState(false);
+        return;
+      }
 
       if (typeof Camera === 'undefined') {
         const errMsg = 'MediaPipe Camera no está disponible. Revisa que tus scripts de MediaPipe estén cargados.';
@@ -283,21 +330,20 @@
 
         await mpCamera.start();
         videoEl.muted = true;
-        videoEl.play().catch(() => {});
 
         status.textContent = 'Cámara activa. Detectando pose...';
-        logUI('Cámara iniciada correctamente');
+        logUI('Cámara iniciada correctamente (MediaPipe).');
       } catch (err) {
-        console.error('error al iniciar cámara', err);
-        status.textContent = 'No se pudo iniciar la cámara: ' + (err.message || err);
-        logUI('No se pudo iniciar la cámara: ' + (err.message || err), true);
+        console.error('error al iniciar MediaPipe Camera', err);
+        const msg = 'No se pudo iniciar MediaPipe Camera: ' + (err.name || err.message || err);
+        status.textContent = msg;
+        logUI(msg, true);
       }
     });
 
     document.getElementById('btnStop').addEventListener('click', () => {
       if (mpCamera) {
         mpCamera.stop();
-        status.textContent = 'Cámara detenida.';
       }
       const videoEl = document.getElementById('input_video');
       if (videoEl.srcObject) {
@@ -305,6 +351,9 @@
         videoEl.srcObject = null;
       }
       currentLandmarks = null;
+      status.textContent = 'Cámara detenida.';
+      logUI('Cámara detenida por usuario');
+      setButtonState(false);
     });
 
     // Cargar modelos al cargar la página
