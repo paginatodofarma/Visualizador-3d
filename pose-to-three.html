@@ -30,7 +30,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 
   <script type="module">
-    const modelPath = 'https://raw.githubusercontent.com/paginatodofarma/Visualizador-3d/main/Modelos/prueba.glb'; // Ruta absoluta raw para evitar CORS / file:// issues
+    const modelPath = 'https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb'; // Modelo de prueba con rig de Three.js
     const keypointIndices = {
       leftShoulder: 11,
       rightShoulder: 12,
@@ -80,12 +80,19 @@
 
       const loader = new THREE.GLTFLoader();
       loader.load(modelPath, gltf => {
+        console.log('GLTF cargado:', gltf);
         rig = gltf.scene;
+        let hasSkinnedMesh = false;
         rig.traverse(child => {
+          console.log('Child:', child.type, child.name);
           if (child.isSkinnedMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
             skeleton = child.skeleton;
+            hasSkinnedMesh = true;
+          } else if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
           }
         });
         scene.add(rig);
@@ -95,20 +102,22 @@
           skel.material.linewidth = 2;
           scene.add(skel);
           skeletonHelper = skel;
+          status.textContent = 'Modelo cargado con esqueleto. Inicializa la cámara.';
         } else {
-          status.textContent = 'Modelo cargado, pero no se detectó esqueleto (SkinnedMesh). Revisa el GLB.';
+          status.textContent = 'Modelo cargado (sin esqueleto). Inicializa la cámara.';
         }
 
         const box = new THREE.Box3().setFromObject(rig);
         const size = box.getSize(new THREE.Vector3()).length();
         const center = box.getCenter(new THREE.Vector3());
         controls.maxDistance = size * 10;
-
         rig.position.set(-center.x, -center.y, -center.z);
-        status.textContent = 'Modelo cargado con esqueleto. Inicializa la cámara.';
-      }, undefined, error => {
+        console.log('Modelo centrado en:', center, 'tamaño:', size);
+      }, progress => {
+        console.log('Progreso de carga:', (progress.loaded / progress.total * 100) + '%');
+      }, error => {
+        console.error('Error cargando modelo:', error);
         status.textContent = 'Error cargando modelo: ' + error.message;
-        console.error(error);
       });
 
       animate();
