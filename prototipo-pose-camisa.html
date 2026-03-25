@@ -318,11 +318,23 @@
         function drawSkeleton(landmarks) {
             if (!overlayCtx || !overlayCanvas) return;
 
+            const video = document.getElementById('video');
+            const videoRect = video.getBoundingClientRect();
+            const scaleX = videoRect.width;
+            const scaleY = videoRect.height;
+            const offsetX = videoRect.left;
+            const offsetY = videoRect.top;
+
             const connections = [
-                [11, 12], [11, 23], [12, 24], // hombros-cadera
-                [23, 24], [11, 13], [13, 15], [12, 14], [14, 16], // brazos
-                [23, 25], [25, 27], [24, 26], [26, 28], // piernas
-                [0, 11], [0, 12] // cabeza-hombros
+                [0, 1], [1, 2], [2, 3], [3, 7], // cara
+                [0, 4], [4, 5], [5, 6], [6, 8],
+                [9, 10], [11, 12],
+                [11, 13], [13, 15], [15, 17], // brazo izquierdo
+                [12, 14], [14, 16], [16, 18], // brazo derecho
+                [11, 23], [12, 24],
+                [23, 24], [23, 25], [25, 27],
+                [24, 26], [26, 28],
+                [27, 29], [29, 31], [28, 30], [30, 32]
             ];
 
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -334,17 +346,16 @@
                 const b = landmarks[j];
                 if (!a || !b) continue;
                 overlayCtx.beginPath();
-                overlayCtx.moveTo(a.x * overlayCanvas.width, a.y * overlayCanvas.height);
-                overlayCtx.lineTo(b.x * overlayCanvas.width, b.y * overlayCanvas.height);
+                overlayCtx.moveTo(a.x * scaleX + offsetX, a.y * scaleY + offsetY);
+                overlayCtx.lineTo(b.x * scaleX + offsetX, b.y * scaleY + offsetY);
                 overlayCtx.stroke();
             }
 
-            // Dibujar puntos
             overlayCtx.fillStyle = 'rgba(255,255,255,0.8)';
             for (const lm of landmarks) {
                 if (!lm) continue;
                 overlayCtx.beginPath();
-                overlayCtx.arc(lm.x * overlayCanvas.width, lm.y * overlayCanvas.height, 4, 0, Math.PI * 2);
+                overlayCtx.arc(lm.x * scaleX + offsetX, lm.y * scaleY + offsetY, 4, 0, Math.PI * 2);
                 overlayCtx.fill();
             }
         }
@@ -385,15 +396,21 @@
                 // Profundidad Z promedio
                 const avgZ = (leftShoulder.z + rightShoulder.z + leftHip.z + rightHip.z) / 4;
 
-                // Escalar la camisa
-                const scaleX = shoulderWidth * 2.5; // Un poco más ancho que los hombros
-                const scaleY = torsoHeight * 2.2; // Altura del torso
-                shirtMesh.scale.set(scaleX, scaleY, 1);
+                // Escalar la camisa con anchura/altura del torso y profundidad
+                const baseScaleX = shoulderWidth * 2.0;
+                const baseScaleY = torsoHeight * 2.4;
+                const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2); // más estable
+                shirtMesh.scale.set(baseScaleX * depthFactor, baseScaleY * depthFactor, 1);
 
-                // Posicionar la camisa
-                shirtMesh.position.x = (torsoCenterX - 0.5) * 6; // Ajustar escala horizontal
-                shirtMesh.position.y = -(torsoCenterY - 0.5) * 4; // Invertir Y y ajustar
-                shirtMesh.position.z = avgZ * 3;
+                // Posicionar la camisa en el marco de la cámara
+                // map normalizado [0,1] → alrededor de [-1,1]
+                const targetX = (torsoCenterX - 0.5) * 2.0;
+                const targetY = -(torsoCenterY - 0.5) * 2.0;
+                shirtMesh.position.x = targetX;
+                shirtMesh.position.y = targetY;
+
+                // Ajuste de profundidad para que la camisa se mueva con presencia
+                shirtMesh.position.z = THREE.MathUtils.clamp(1.0 - (avgZ * 2.0), -0.5, 1.5);
 
                 // Calcular rotación basada en hombros
                 const shoulderAngle = Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x);
