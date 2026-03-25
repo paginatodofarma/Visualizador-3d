@@ -60,7 +60,6 @@
 </head>
 <body>
     <h1>Visualizador 3D de Modelos GLB</h1>
-    <button id="btnPoseTest" class="share-button">Probar PoseLandmarker (MediaPipe)</button>
     <div class="viewer-container">
         <model-viewer
             id="modelViewer"
@@ -180,12 +179,6 @@
                 alert('Enlace copiado al portapapeles: ' + url.toString());
             });
         }
-
-        // Botón para abrir la prueba de PoseLandmarker
-        const poseBtn = document.getElementById('btnPoseTest');
-        poseBtn.addEventListener('click', () => {
-            window.open('pose-landmarker-test.html', '_blank', 'width=950,height=700');
-        });
 
         // Cargar modelos al cargar la página
         window.onload = loadModels;
