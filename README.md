@@ -4,7 +4,7 @@ Este proyecto es un visualizador 3D y AR para archivos .glb alojados en la carpe
 
 ## Cómo usar
 
-1. Coloca tus archivos .glb en la carpeta `modelo`.
+1. Coloca tus archivos .glb en la carpeta `Modelos`.
 2. Actualiza `models.json` con la lista de tus modelos.
 3. Sube el repositorio a GitHub.
 4. Ve a Settings > Pages y selecciona la rama principal como source.

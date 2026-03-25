@@ -51,9 +51,11 @@ function loadModel(modelName) {
         scene.remove(model);
     }
     const loader = new THREE.GLTFLoader();
-    loader.load(`modelo/${modelName}`, (gltf) => {
+    loader.load(`Modelos/${modelName}`, (gltf) => {
         model = gltf.scene;
         scene.add(model);
+    }, undefined, (error) => {
+        console.error('Error loading model:', error);
     });
 }
 
