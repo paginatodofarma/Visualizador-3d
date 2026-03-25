@@ -400,9 +400,7 @@
                 const baseScaleX = shoulderWidth * 2.0;
                 const baseScaleY = torsoHeight * 2.4;
                 const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.7, 2.2); // más estable
-                const effectiveScaleX = baseScaleX * depthFactor;
-                const effectiveScaleY = baseScaleY * depthFactor;
-                shirtMesh.scale.set(effectiveScaleX, effectiveScaleY, 1);
+                shirtMesh.scale.set(baseScaleX * depthFactor, baseScaleY * depthFactor, 1);
 
                 // Posicionar la camisa en el marco de la cámara
                 // map normalizado [0,1] → alrededor de [-1,1]
@@ -429,19 +427,23 @@
                     shirtMesh.position.y += neckOffset;
                 }
 
+                // Ajuste de escala en profundidad para compensar acercarse/alejarse
+                const depthFactor = THREE.MathUtils.clamp(1.0 / (avgZ + 0.45), 0.65, 2.8);
+                shirtMesh.scale.multiplyScalar(depthFactor);
+
                 // Ajustar mangas basado en codos
                 if (shirtMesh.children.length >= 3) {
                     const leftSleeve = shirtMesh.children[1]; // Manga izquierda
                     const rightSleeve = shirtMesh.children[2]; // Manga derecha
 
                     if (leftElbow) {
-                        leftSleeve.position.x = (leftShoulder.x - torsoCenterX) * effectiveScaleX;
-                        leftSleeve.position.y = (leftShoulder.y - torsoCenterY) * effectiveScaleY * 0.5;
+                        leftSleeve.position.x = (leftShoulder.x - torsoCenterX) * scaleX;
+                        leftSleeve.position.y = (leftShoulder.y - torsoCenterY) * scaleY * 0.5;
                     }
 
                     if (rightElbow) {
-                        rightSleeve.position.x = (rightShoulder.x - torsoCenterX) * effectiveScaleX;
-                        rightSleeve.position.y = (rightShoulder.y - torsoCenterY) * effectiveScaleY * 0.5;
+                        rightSleeve.position.x = (rightShoulder.x - torsoCenterX) * scaleX;
+                        rightSleeve.position.y = (rightShoulder.y - torsoCenterY) * scaleY * 0.5;
                     }
                 }
             }
