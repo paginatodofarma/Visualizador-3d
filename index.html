@@ -80,19 +80,145 @@
     </div>
 
     <script>
-        const models = [
-            'prueba',
-            'modelo1',
-            'modelo2',
-            'modelo3',
-            'modelo4',
-            'modelo5',
-            'modelo6',
-            'modelo7',
-            'modelo8',
-            'modelo9',
-            'modelo10'
-        ];
+        let models = [];
+        const fallbackModels = ['prueba'];
+
+        function getBasePath() {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(Boolean);
+            if (segments.length === 0) return '/';
+            return `/${segments[0]}`;
+        }
+
+        function updateCurrentUrl(modelName) {
+            const current = `${window.location.origin}${getBasePath()}/${modelName}`;
+            document.getElementById('currentUrl').innerText = current;
+            return current;
+        }
+
+        function loadModel(modelName, pushHistory = true) {
+            const viewer = document.getElementById('modelViewer');
+            viewer.src = `Modelos/${modelName}.glb`;
+            document.querySelectorAll('#modelList li').forEach(li => li.classList.remove('selected'));
+            const selected = document.querySelector(`#modelList li[data-name="${modelName}"]`);
+            if (selected) selected.classList.add('selected');
+            if (pushHistory) {
+                const basePath = getBasePath();
+                history.pushState(null, '', `${basePath}/${modelName}`);
+            }
+            updateCurrentUrl(modelName);
+        }
+
+        function renderModelList() {
+            const modelList = document.getElementById('modelList');
+            modelList.innerHTML = '';
+            models.forEach(model => {
+                const li = document.createElement('li');
+                li.textContent = model;
+                li.dataset.name = model;
+                li.addEventListener('click', () => loadModel(model));
+                modelList.appendChild(li);
+            });
+        }
+
+        function init() {
+            fetch('modelos.json')
+                .then(resp => resp.json())
+                .then(data => {
+                    models = data;
+                    if (!models.length) models = fallbackModels;
+                    renderModelList();
+                    const path = window.location.pathname;
+                    const segments = path.split('/').filter(Boolean);
+                    const modelName = segments.length > 1 ? segments[1] : models[0];
+                    loadModel(models.includes(modelName) ? modelName : models[0], false);
+                })
+                .catch(() => {
+                    models = fallbackModels;
+                    renderModelList();
+                    loadModel(models[0], false);
+                });
+        }
+
+        window.onload = init;
+
+        window.onpopstate = function() {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(Boolean);
+            const modelName = segments.length > 1 ? segments[1] : models[0];
+            loadModel(models.includes(modelName) ? modelName : models[0], false);
+        };
+
+        document.getElementById('copyLink').addEventListener('click', () => {
+            const modelName = document.querySelector('#modelList li.selected')?.dataset.name || models[0];
+            const url = updateCurrentUrl(modelName);
+            navigator.clipboard.writeText(url).then(() => {
+                alert('URL copiada al portapapeles:\n' + url);
+            }, () => {
+                alert('Error al copiar URL. Usa Ctrl+C para copiar: ' + url);
+            });
+        });
+
+        // Mantengo estas funciones aquí para compatibilidad con el cuerpo del código en versiones anteriores
+        function getBasePath() {
+            const path = window.location.pathname;
+            const segments = path.split('/').filter(Boolean);
+            if (segments.length === 0) return '/';
+            return `/${segments[0]}`;
+        }
+
+        function updateCurrentUrl(modelName) {
+            const current = `${window.location.origin}${getBasePath()}/${modelName}`;
+            document.getElementById('currentUrl').innerText = current;
+            return current;
+        }
+
+        function loadModel(modelName, pushHistory = true) {
+            const viewer = document.getElementById('modelViewer');
+            viewer.src = `Modelos/${modelName}.glb`;
+            document.querySelectorAll('#modelList li').forEach(li => li.classList.remove('selected'));
+            const selected = document.querySelector(`#modelList li[data-name="${modelName}"]`);
+            if (selected) selected.classList.add('selected');
+            if (pushHistory) {
+                const basePath = getBasePath();
+                history.pushState(null, '', `${basePath}/${modelName}`);
+            }
+            updateCurrentUrl(modelName);
+        }
+
+        function renderModelList() {
+            const modelList = document.getElementById('modelList');
+            modelList.innerHTML = '';
+            models.forEach(model => {
+                const li = document.createElement('li');
+                li.textContent = model;
+                li.dataset.name = model;
+                li.addEventListener('click', () => loadModel(model));
+                modelList.appendChild(li);
+            });
+        }
+
+        function initModelos() {
+            fetch('modelos.json')
+                .then(resp => resp.json())
+                .then(data => {
+                    models = data;
+                    if (!models.length) models = fallbackModels;
+                    renderModelList();
+                    const path = window.location.pathname;
+                    const segments = path.split('/').filter(Boolean);
+                    const modelName = segments.length > 1 ? segments[1] : models[0];
+                    loadModel(models.includes(modelName) ? modelName : models[0], false);
+                })
+                .catch(() => {
+                    models = fallbackModels;
+                    renderModelList();
+                    loadModel(models[0], false);
+                });
+        }
+
+        window.onload = initModelos;
+
 
         function getBasePath() {
             const path = window.location.pathname;

@@ -25,7 +25,12 @@ Este proyecto es una página web estática que utiliza `<model-viewer>` de Googl
 ## Agregar Más Modelos
 
 1. Coloca tus archivos .glb en la carpeta `Modelos/`.
-2. Edita `index.html` y `404.html`, agrega un `<li onclick="loadModel('nombre')">nombre</li>` en la lista, donde 'nombre' es el nombre del archivo sin .glb.
+2. Ejecuta el script para generar/actualizar automáticamente el listado:
+
+   `node generate-modelos.js`
+
+3. Verifica `modelos.json` contiene todos los nombres (sin .glb).
+4. Sube a GitHub.
 
 ## Routing y URL directa por modelo
 
