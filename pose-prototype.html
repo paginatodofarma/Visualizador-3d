@@ -481,6 +481,7 @@
                 if (results.segmentationMask && videoPlane) {
                     const maskCanvas = createMaskCanvas(results.segmentationMask);
                     if (maskCanvas) {
+                        enhanceMaskWithHandAndFace(maskCanvas);
                         const combinedCanvas = document.createElement('canvas');
                         combinedCanvas.width = results.image.width;
                         combinedCanvas.height = results.image.height;
