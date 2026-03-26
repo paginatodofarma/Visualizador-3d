@@ -127,16 +127,33 @@
         const loadingText = document.getElementById('loading-text');
         const loadingOverlay = document.getElementById('loading-overlay');
 
+        let modelsLoaded = 0;
+        const totalModels = 3; // Pose, Hands, Face
+
         function updateProgress() {
             loadedScripts++;
-            const percentage = (loadedScripts / totalScripts) * 100;
+            const percentage = (loadedScripts / totalScripts) * 50; // Scripts = primeros 50%
             progressFill.style.width = percentage + '%';
             loadingText.textContent = `Descargando paquetes: ${loadedScripts}/${totalScripts}`;
             if (loadedScripts === totalScripts) {
                 setTimeout(() => {
-                    loadingOverlay.classList.add('hidden');
+                    loadingText.textContent = 'Cargando modelos de IA...';
                     startApp();
-                }, 500); // Small delay to show 100%
+                }, 500);
+            }
+        }
+
+        function updateModelProgress() {
+            modelsLoaded++;
+            const baseProgress = 50; // Scripts completados = 50%
+            const modelProgress = (modelsLoaded / totalModels) * 50; // Modelos = otros 50%
+            const totalPercentage = baseProgress + modelProgress;
+            progressFill.style.width = totalPercentage + '%';
+            loadingText.textContent = `Cargando modelos: ${modelsLoaded}/${totalModels}`;
+            if (modelsLoaded === totalModels) {
+                setTimeout(() => {
+                    loadingOverlay.classList.add('hidden');
+                }, 500);
             }
         }
 
@@ -181,6 +198,10 @@
             let bones = [];
             let previousMapped = null;
             const snapThreshold = 0.28; // si el cambio es muy grande, evitar demasiada inercia
+
+            let poseLoaded = false;
+            let handsLoaded = false;
+            let faceLoaded = false;
 
             function lerp(a, b, t) {
                 return a + (b - a) * t;
@@ -522,6 +543,10 @@
         }
 
         function onHandsResults(results) {
+            if (!handsLoaded) {
+                handsLoaded = true;
+                updateModelProgress();
+            }
             latestHandLandmarks = results.multiHandLandmarks || null;
             if (latestHandLandmarks && latestHandLandmarks.length) {
                 statusElement.textContent = 'Manos detectadas: ' + latestHandLandmarks.length;
@@ -529,10 +554,18 @@
         }
 
         function onFaceResults(results) {
+            if (!faceLoaded) {
+                faceLoaded = true;
+                updateModelProgress();
+            }
             latestFaceLandmarks = results.multiFaceLandmarks ? results.multiFaceLandmarks[0] : null;
         }
 
         async function onResults(results) {
+            if (!poseLoaded) {
+                poseLoaded = true;
+                updateModelProgress();
+            }
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             // Dibujar video completo (según toggle) sin recorte.
