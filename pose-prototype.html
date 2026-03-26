@@ -171,6 +171,7 @@
         let showVideoGlobal = false;
 
         // Global 3D objects
+        let scene, camera, renderer;
         let torso, leftArm, rightArm, leftLeg, rightLeg, videoPlane;
         let shirtModel = null;
         let shirtLoaded = false;
@@ -621,16 +622,21 @@
         }
 
         function loadShirtModel() {
+            const shirtTitle = 'Camisa 3D local (camisa larga)';
+            const shirtUrl = './Modelos/camisa%20larga.glb';
+
             if (!THREE.GLTFLoader) {
-                console.warn('GLTFLoader no está disponible. Asegura incluir la librería.');
+                console.warn('GLTFLoader no está disponible. Crear modelo geométrico de camiseta de fallback.');
+                createFallbackShirtModel();
                 return;
             }
+
             const loader = new THREE.GLTFLoader();
-            const shirtUrl = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Box/glTF/Box.gltf';
 
             loader.load(shirtUrl,
                 gltf => {
                     shirtModel = gltf.scene;
+                    shirtModel.name = shirtTitle;
                     shirtModel.traverse(obj => {
                         if (obj.isMesh) {
                             obj.castShadow = true;
@@ -640,23 +646,55 @@
                             obj.material.opacity = 0.95;
                         }
                     });
-                    shirtModel.scale.set(0.5, 0.5, 0.5);
+                    shirtModel.scale.set(0.6, 0.6, 0.25);
                     shirtModel.visible = false;
                     scene.add(shirtModel);
                     shirtLoaded = true;
-                    console.log('Modelo de camisa cargado.');
+                    console.log('Modelo de camisa cargado desde GLTF.');
                 },
                 xhr => {
-                    // Estimación de progreso del download
-                    if (xhr.lengthComputable) {
-                        const percent = (xhr.loaded / xhr.total) * 100;
-                        console.log(`Shirt model ${percent.toFixed(1)}% descargado`);
+                    if (xhr.total) {
+                        const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
+                        console.log(`Descargando camisa ${percent}%`);
                     }
                 },
-                error => {
-                    console.error('Error cargando modelo de camisa:', error);
+                err => {
+                    console.warn('No se pudo cargar modelo GLTF de camisa, usando modelo fallback.', err);
+                    createFallbackShirtModel();
                 }
             );
+        }
+
+        function createFallbackShirtModel() {
+            const shirtGroup = new THREE.Group();
+
+            // Cuerpo de la camisa (plano engrosado)
+            const torsoGeometry = new THREE.BoxGeometry(0.5, 0.6, 0.15);
+            const sleeveGeometry = new THREE.BoxGeometry(0.22, 0.22, 0.12);
+            const material = new THREE.MeshStandardMaterial({ color: 0x1565c0, transparent: true, opacity: 0.88, roughness: 0.6, metalness: 0.1 });
+
+            const torsoMesh = new THREE.Mesh(torsoGeometry, material.clone());
+            torsoMesh.position.set(0, 0, 0);
+            shirtGroup.add(torsoMesh);
+
+            const leftSleeve = new THREE.Mesh(sleeveGeometry, material.clone());
+            leftSleeve.position.set(-0.36, 0.14, 0);
+            leftSleeve.rotation.z = Math.PI * 0.08;
+            shirtGroup.add(leftSleeve);
+
+            const rightSleeve = new THREE.Mesh(sleeveGeometry, material.clone());
+            rightSleeve.position.set(0.36, 0.14, 0);
+            rightSleeve.rotation.z = -Math.PI * 0.08;
+            shirtGroup.add(rightSleeve);
+
+            shirtGroup.name = 'Camisa fallback';
+            shirtGroup.visible = false;
+            scene.add(shirtGroup);
+
+            shirtModel = shirtGroup;
+            shirtLoaded = true;
+
+            console.log('Modelo de camisa fallback creado.');
         }
 
         function onHandsResults(results) {
@@ -1021,7 +1059,7 @@
                 updateRenderSize();
             };
 
-            const camera = new Camera(videoElement, {
+            const cameraController = new Camera(videoElement, {
                 onFrame: async () => {
                     await pose.send({image: videoElement});
                     await hands.send({image: videoElement});
@@ -1030,12 +1068,14 @@
                 width: isMobile ? 320 : 640, // Resolución más baja en móvil
                 height: isMobile ? 240 : 480
             });
-            camera.start();
+            cameraController.start();
 
             updateRenderSize();
         }
 
-        initPose();
+        // La inicialización principal ya se dispara tras cargarse scripts en updateProgress().
+        // startApp();
+
     </script>
 </body>
 </html>
