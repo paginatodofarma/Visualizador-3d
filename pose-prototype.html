@@ -21,8 +21,8 @@
                 if (event.data && event.data.type === 'CACHE_CLEARED') {
                     console.log('Caché limpiado exitosamente');
                 } else if (event.data && event.data.type === 'MODEL_FROM_CACHE') {
-                    // No incrementar downloadedSize si vino de caché
-                    console.log('Modelo cargado desde caché');
+                    cacheHits++;
+                    console.log('Modelo cargado desde caché, total hits:', cacheHits);
                 }
             });
         }
@@ -188,14 +188,21 @@
 
         function updateModelProgress() {
             modelsLoaded++;
-            downloadedSize += modelSizes[modelsLoaded - 1];
+            if (cacheHits < modelsLoaded) {
+                // Si no todos vinieron de caché, incrementar tamaño
+                downloadedSize += modelSizes[modelsLoaded - 1];
+            }
             const baseProgress = 50; // Scripts completados = 50%
             const modelProgress = (modelsLoaded / totalModels) * 50; // Modelos = otros 50%
             const totalPercentage = baseProgress + modelProgress;
             progressFill.style.width = totalPercentage + '%';
-            const downloadedMB = (downloadedSize / 1000).toFixed(1);
-            const totalMB = (totalScriptSize + totalModelSize) / 1000;
-            loadingText.textContent = `Cargando modelos: ${downloadedMB}MB / ${totalMB}MB`;
+            if (cacheHits === totalModels) {
+                loadingText.textContent = 'Modelos cargados desde caché';
+            } else {
+                const downloadedMB = (downloadedSize / 1000).toFixed(1);
+                const totalMB = (totalScriptSize + totalModelSize) / 1000;
+                loadingText.textContent = `Cargando modelos: ${downloadedMB}MB / ${totalMB}MB`;
+            }
             if (modelsLoaded === totalModels) {
                 setTimeout(() => {
                     loadingOverlay.classList.add('hidden');
