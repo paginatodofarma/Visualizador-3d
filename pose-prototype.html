@@ -61,6 +61,7 @@
     <button class="share-button" id="togglePantsButton" onclick="togglePants()" style="background: #28a745;">Ocultar pantalón</button>
     <button class="share-button" id="toggleBackgroundButton" onclick="toggleBackground()" style="background: #6c757d;">Desactivar fondo</button>
     <button class="share-button" id="toggleMaskModeButton" onclick="toggleMaskMode()" style="background: #17a2b8;">Modo máscara normal</button>
+    <button class="share-button" id="toggleVideoGlobalButton" onclick="toggleVideoGlobal()" style="background: #6610f2;">Ver video global</button>
     <video id="video" autoplay playsinline></video>
     <div id="preview-wrapper">
         <canvas id="canvas"></canvas>
@@ -70,6 +71,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js"></script>
 
@@ -82,16 +85,17 @@
         const threejsContainer = document.getElementById('threejs-container');
 
         let pose;
+        let hands;
+        let face;
+        let latestHandLandmarks = null;
+        let latestFaceLandmarks = null;
         let drawSkeleton = true;
         let showShirt = true;
         let showPants = true;
         let showBackground = true;
         let inverseMask = false;
-
-        // Three.js setup
-        let scene, camera, renderer;
-        let videoPlane;
-        let currentAspect = 1;
+        let showVideoGlobal = false;
+        let videoPlane = null;
         let torso, leftArm, rightArm, leftLeg, rightLeg;
         let joints = {};
         let bones = [];
@@ -313,8 +317,8 @@
 
         function togglePants() {
             showPants = !showPants;
-            leftLeg.visible = showPants;
-            rightLeg.visible = showPants;
+            if (leftLeg) leftLeg.visible = showPants;
+            if (rightLeg) rightLeg.visible = showPants;
             document.getElementById('togglePantsButton').textContent = showPants ? 'Ocultar pantalón' : 'Mostrar pantalón';
         }
 
@@ -328,10 +332,57 @@
             document.getElementById('toggleMaskModeButton').textContent = inverseMask ? 'Modo máscara inversa' : 'Modo máscara normal';
         }
 
+        function toggleVideoGlobal() {
+            showVideoGlobal = !showVideoGlobal;
+            document.getElementById('toggleVideoGlobalButton').textContent = showVideoGlobal ? 'Ver video recortado' : 'Ver video global';
+            if (videoPlane) {
+                videoPlane.visible = !showVideoGlobal;
+            }
+        }
+
+        function onHandsResults(results) {
+            latestHandLandmarks = results.multiHandLandmarks || null;
+            if (latestHandLandmarks && latestHandLandmarks.length) {
+                statusElement.textContent = 'Manos detectadas: ' + latestHandLandmarks.length;
+            }
+        }
+
+        function onFaceResults(results) {
+            latestFaceLandmarks = results.multiFaceLandmarks ? results.multiFaceLandmarks[0] : null;
+        }
+
         async function onResults(results) {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            // Dibujar video completo (según toggle)
+            // Dibujar video completo (según toggle) sin recorte.
+            if (showVideoGlobal) {
+                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+                if (results.poseLandmarks && results.poseLandmarks.length >= 29) {
+                    if (drawSkeleton) {
+                        drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
+                        drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
+                    }
+                    // Siempre dibujar manos en modo global si hay datos
+                    if (latestHandLandmarks) {
+                        latestHandLandmarks.forEach(hand => {
+                            drawConnectors(canvasCtx, hand, HAND_CONNECTIONS, {color: '#00FFFF', lineWidth: 2});
+                            drawLandmarks(canvasCtx, hand, {color: '#FF00FF', lineWidth: 1});
+                        });
+                    }
+                    // Dibujar cara en modo global si hay datos
+                    if (latestFaceLandmarks) {
+                        drawConnectors(canvasCtx, latestFaceLandmarks, FACEMESH_CONTOURS, {color: '#FFFF00', lineWidth: 1});
+                        drawLandmarks(canvasCtx, latestFaceLandmarks, {color: '#FFA500', lineWidth: 1});
+                    }
+                    updateClothing(results.poseLandmarks);
+                }
+
+                renderer.render(scene, camera);
+                canvasCtx.restore();
+                return;
+            }
+
             if (showBackground) {
                 canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             }
@@ -352,6 +403,16 @@
                 if (drawSkeleton) {
                     drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
                     drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2});
+                    if (latestHandLandmarks) {
+                        latestHandLandmarks.forEach(hand => {
+                            drawConnectors(canvasCtx, hand, HAND_CONNECTIONS, {color: '#00FFFF', lineWidth: 2});
+                            drawLandmarks(canvasCtx, hand, {color: '#FF00FF', lineWidth: 1});
+                        });
+                    }
+                    if (latestFaceLandmarks) {
+                        drawConnectors(canvasCtx, latestFaceLandmarks, FACEMESH_CONTOURS, {color: '#FFFF00', lineWidth: 1});
+                        drawLandmarks(canvasCtx, latestFaceLandmarks, {color: '#FFA500', lineWidth: 1});
+                    }
                 }
 
                 // Actualizar textura segmentada para videoPlane
@@ -414,6 +475,22 @@
                 raw[key] = toThreeJS(clamp01(lm.x), clamp01(lm.y));
                 raw[key].visible = isLandmarkVisible(lm);
             });
+
+            // Refinar wrists con hand landmarks para mayor precisión
+            if (latestHandLandmarks && latestHandLandmarks.length > 0) {
+                latestHandLandmarks.forEach(hand => {
+                    if (hand && hand.length > 0) {
+                        const wristHand = hand[0]; // landmark 0: muñeca
+                        const handX = wristHand.x;
+                        // Determinar si es mano izquierda o derecha basado en proximidad al wrist de pose
+                        const leftWristDist = Math.abs(handX - landmarks[15].x); // leftWrist pose
+                        const rightWristDist = Math.abs(handX - landmarks[16].x); // rightWrist pose
+                        const targetKey = leftWristDist < rightWristDist ? 'leftWrist' : 'rightWrist';
+                        raw[targetKey] = toThreeJS(clamp01(wristHand.x), clamp01(wristHand.y));
+                        raw[targetKey].visible = true; // asumir visible si detectada
+                    }
+                });
+            }
 
             const mapped = {};
             Object.keys(raw).forEach(key => {
@@ -542,6 +619,36 @@
             });
             pose.onResults(onResults);
 
+            if (!window.Pose) console.error('MediaPipe Pose no cargado');
+            if (!window.Hands) console.error('MediaPipe Hands no cargado');
+
+
+            hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${file}`;
+                }
+            });
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            hands.onResults(onHandsResults);
+
+            face = new FaceMesh({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`;
+                }
+            });
+            face.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            face.onResults(onFaceResults);
+
             videoElement.onloadedmetadata = () => {
                 updateRenderSize();
             };
@@ -549,6 +656,8 @@
             const camera = new Camera(videoElement, {
                 onFrame: async () => {
                     await pose.send({image: videoElement});
+                    await hands.send({image: videoElement});
+                    await face.send({image: videoElement});
                 },
                 width: 640,
                 height: 480
