@@ -153,6 +153,9 @@
 
         function startApp() {
             // Main app code starts here
+            // Detectar si es dispositivo móvil
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
             const videoElement = document.getElementById('video');
             const canvasElement = document.getElementById('canvas');
             const canvasCtx = canvasElement.getContext('2d');
@@ -822,16 +825,21 @@
         async function initPose() {
             initThreeJS();
 
+            console.log('Dispositivo móvil detectado:', isMobile);
+            if (isMobile) {
+                statusElement.textContent = 'Modo móvil activado - Rendimiento optimizado';
+            }
+
             pose = new Pose({
                 locateFile: (file) => {
                     return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
                 }
             });
             pose.setOptions({
-                modelComplexity: 1,
+                modelComplexity: isMobile ? 0 : 1,
                 smoothLandmarks: true,
-                enableSegmentation: true,
-                smoothSegmentation: true,
+                enableSegmentation: !isMobile, // Desactivar segmentación en móvil para mejor rendimiento
+                smoothSegmentation: !isMobile,
                 minDetectionConfidence: 0.5,
                 minTrackingConfidence: 0.5
             });
@@ -847,8 +855,8 @@
                 }
             });
             hands.setOptions({
-                maxNumHands: 2,
-                modelComplexity: 1,
+                maxNumHands: isMobile ? 1 : 2, // Solo una mano en móvil
+                modelComplexity: isMobile ? 0 : 1,
                 minDetectionConfidence: 0.5,
                 minTrackingConfidence: 0.5
             });
@@ -861,7 +869,7 @@
             });
             face.setOptions({
                 maxNumFaces: 1,
-                refineLandmarks: true,
+                refineLandmarks: !isMobile, // Desactivar refinamiento en móvil
                 minDetectionConfidence: 0.5,
                 minTrackingConfidence: 0.5
             });
@@ -877,8 +885,8 @@
                     await hands.send({image: videoElement});
                     await face.send({image: videoElement});
                 },
-                width: 640,
-                height: 480
+                width: isMobile ? 320 : 640, // Resolución más baja en móvil
+                height: isMobile ? 240 : 480
             });
             camera.start();
 
