@@ -86,7 +86,10 @@
             camera.position.z = 1;
 
             renderer = new THREE.WebGLRenderer({ alpha: true });
-            renderer.setSize(canvasElement.width, canvasElement.height);
+            renderer.setSize(640, 480);
+            renderer.domElement.style.position = 'absolute';
+            renderer.domElement.style.top = '0';
+            renderer.domElement.style.left = '0';
             threejsContainer.appendChild(renderer.domElement);
 
             // Video de fondo como textura Three.js
@@ -301,6 +304,16 @@
 
             canvasElement.width = 640;
             canvasElement.height = 480;
+            // Aseguramos que el video no se muestre en bloque separado, solo como textura ThreeJS
+            videoElement.style.position = 'absolute';
+            videoElement.style.top = '0';
+            videoElement.style.left = '0';
+            videoElement.style.width = '640px';
+            videoElement.style.height = '480px';
+            videoElement.style.objectFit = 'cover';
+            videoElement.style.zIndex = '0';
+
+            renderer.domElement.style.zIndex = '1';
         }
 
         initPose();
