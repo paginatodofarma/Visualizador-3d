@@ -13,6 +13,12 @@ self.addEventListener('fetch', event => {
                 .then(response => {
                     if (response) {
                         console.log('Modelo cacheado encontrado:', event.request.url);
+                        // Notificar al cliente que se usó caché
+                        event.waitUntil(
+                            self.clients.matchAll().then(clients => {
+                                clients.forEach(client => client.postMessage({type: 'MODEL_FROM_CACHE'}));
+                            })
+                        );
                         // Verificar si hay una versión más nueva en background
                         fetch(event.request).then(networkResponse => {
                             if (networkResponse.status === 200) {

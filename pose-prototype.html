@@ -157,6 +157,7 @@
         const modelSizes = [10000, 5000, 3000]; // KB aproximados (10MB, 5MB, 3MB)
         let totalModelSize = modelSizes.reduce((a, b) => a + b, 0); // ~18MB
         let downloadedSize = 0;
+        let cacheHits = 0;
 
         // Global variables for toggles
         let drawSkeleton = true;
