@@ -208,7 +208,45 @@
             return maskCanvas;
         }
 
+        function enhanceMaskWithHandAndFace(maskCanvas) {
+            if (!maskCanvas) return;
+            const ctx = maskCanvas.getContext('2d');
+            ctx.save();
+            ctx.fillStyle = 'rgba(255,255,255,1)';
+
+            if (latestHandLandmarks && latestHandLandmarks.length > 0) {
+                const radius = Math.max(maskCanvas.width, maskCanvas.height) * 0.03;
+                latestHandLandmarks.forEach(hand => {
+                    if (!hand) return;
+                    hand.forEach(point => {
+                        const x = point.x * maskCanvas.width;
+                        const y = point.y * maskCanvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                        ctx.fill();
+                    });
+                });
+            }
+
+            if (latestFaceLandmarks && latestFaceLandmarks.length > 0) {
+                const nose = latestFaceLandmarks[1];
+                if (nose) {
+                    const x = nose.x * maskCanvas.width;
+                    const y = nose.y * maskCanvas.height;
+                    const faceRadius = Math.max(maskCanvas.width, maskCanvas.height) * 0.08;
+                    ctx.beginPath();
+                    ctx.arc(x, y, faceRadius, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+
+            ctx.restore();
+        }
+
         function applySoftSegmentationMask(ctx, maskCanvas, width, height, inverse) {
+            // Mejora máscara con datos de manos y cara (por cada dedo/rostro) antes de difuminar.
+            enhanceMaskWithHandAndFace(maskCanvas);
+
             // Suaviza bordes y reduce “estela blanca” al recortar el cuerpo.
             const temp = document.createElement('canvas');
             temp.width = maskCanvas.width;
