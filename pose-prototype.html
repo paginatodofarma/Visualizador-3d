@@ -18,18 +18,26 @@
         #video {
             display: none;
         }
-        #canvas {
-            border: 2px solid #333;
-            max-width: 100%;
-            height: auto;
+        #preview-wrapper {
+            width: 640px;
+            height: 480px;
+            margin: 10px auto;
             position: relative;
+            border: 2px solid #333;
+            overflow: hidden;
+            background: #000;
+        }
+        #canvas {
+            width: 640px;
+            height: 480px;
+            display: block;
         }
         #threejs-container {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 640px;
+            height: 480px;
             pointer-events: none;
         }
         .status {
@@ -43,9 +51,11 @@
     <h1>Prototipo de Detección de Pose con MediaPipe</h1>
     <p>Esta página detecta poses corporales en tiempo real y muestra el esqueleto.</p>
     <button class="share-button" id="toggleSkeletonButton" onclick="toggleSkeleton()" style="background: #ff9800;">Ocultar esqueleto</button>
-    <video id="video" autoplay playsinline></video>
-    <canvas id="canvas"></canvas>
-    <div id="threejs-container"></div>
+    <div id="preview-wrapper">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div id="threejs-container"></div>
+    </div>
     <div class="status" id="status">Cargando...</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
