@@ -90,6 +90,7 @@
         let latestHandLandmarks = null;
         let latestFaceLandmarks = null;
         let drawSkeleton = true;
+        let head = null;
         let showShirt = true;
         let showPants = true;
         let showBackground = true;
@@ -207,6 +208,22 @@
             return maskCanvas;
         }
 
+        function applySoftSegmentationMask(ctx, maskCanvas, width, height, inverse) {
+            // Suaviza bordes y reduce “estela blanca” al recortar el cuerpo.
+            const temp = document.createElement('canvas');
+            temp.width = maskCanvas.width;
+            temp.height = maskCanvas.height;
+            const tempCtx = temp.getContext('2d');
+            tempCtx.filter = 'blur(4px)';
+            tempCtx.drawImage(maskCanvas, 0, 0);
+
+            ctx.save();
+            ctx.globalCompositeOperation = inverse ? 'destination-in' : 'destination-out';
+            ctx.drawImage(temp, 0, 0, width, height);
+            ctx.restore();
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
         function initThreeJS() {
             scene = new THREE.Scene();
             camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
@@ -270,6 +287,15 @@
             rightLeg.castShadow = true;
             rightLeg.receiveShadow = true;
             scene.add(rightLeg);
+
+            // Cabeza (esfera)
+            const headGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+            head = new THREE.Mesh(headGeometry, material.clone());
+            head.material.color.setHex(0xffff00);
+            head.castShadow = true;
+            head.receiveShadow = true;
+            head.visible = true;
+            scene.add(head);
 
             // Joints del esqueleto (esferas pequeñas)
             const jointNames = ['leftShoulder','rightShoulder','leftElbow','rightElbow','leftWrist','leftHip','rightHip','leftKnee','rightKnee','leftAnkle','rightAnkle'];
@@ -390,13 +416,11 @@
             if (results.poseLandmarks && results.poseLandmarks.length >= 29) {
                 statusElement.textContent = drawSkeleton ? 'Cuerpo detectado - Mostrando esqueleto' : 'Cuerpo detectado - Esqueleto oculto';
 
-                // Aplicar máscara para cuerpo/fondo según modo
+                // Aplicar máscara para cuerpo/fondo según modo con bordes suavizados
                 if (results.segmentationMask) {
                     const maskCanvas = createMaskCanvas(results.segmentationMask);
                     if (maskCanvas) {
-                        canvasCtx.globalCompositeOperation = inverseMask ? 'destination-in' : 'destination-out';
-                        canvasCtx.drawImage(maskCanvas, 0, 0, canvasElement.width, canvasElement.height);
-                        canvasCtx.globalCompositeOperation = 'source-over';
+                        applySoftSegmentationMask(canvasCtx, maskCanvas, canvasElement.width, canvasElement.height, inverseMask);
                     }
                 }
 
@@ -415,7 +439,7 @@
                     }
                 }
 
-                // Actualizar textura segmentada para videoPlane
+                // Actualizar textura segmentada para videoPlane (con bordes suaves)
                 if (results.segmentationMask && videoPlane) {
                     const maskCanvas = createMaskCanvas(results.segmentationMask);
                     if (maskCanvas) {
@@ -424,8 +448,16 @@
                         combinedCanvas.height = results.image.height;
                         const combinedCtx = combinedCanvas.getContext('2d');
                         combinedCtx.drawImage(results.image, 0, 0);
+
+                        const smoothMask = document.createElement('canvas');
+                        smoothMask.width = maskCanvas.width;
+                        smoothMask.height = maskCanvas.height;
+                        const smoothCtx = smoothMask.getContext('2d');
+                        smoothCtx.filter = 'blur(4px)';
+                        smoothCtx.drawImage(maskCanvas, 0, 0);
+
                         combinedCtx.globalCompositeOperation = 'destination-in';
-                        combinedCtx.drawImage(maskCanvas, 0, 0, combinedCanvas.width, combinedCanvas.height);
+                        combinedCtx.drawImage(smoothMask, 0, 0, combinedCanvas.width, combinedCanvas.height);
 
                         const segmentedTexture = new THREE.CanvasTexture(combinedCanvas);
                         videoPlane.material.map = segmentedTexture;
@@ -530,6 +562,39 @@
             torso.visible = showShirt;
             leftLeg.visible = showPants;
             rightLeg.visible = showPants;
+
+            // Ajuste de cabeza/cuello con FaceMesh
+            if (latestFaceLandmarks && latestFaceLandmarks.length > 0) {
+                const nose = latestFaceLandmarks[1]; // nariz cerca del centro
+                const leftEye = latestFaceLandmarks[33];
+                const rightEye = latestFaceLandmarks[263];
+                if (nose && leftEye && rightEye && head) {
+                    const faceCenter3D = toThreeJS(clamp01(nose.x), clamp01(nose.y));
+                    const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+                    const eyeCenterY = (leftEye.y + rightEye.y) / 2;
+                    const eyeCenter3D = toThreeJS(clamp01(eyeCenterX), clamp01(eyeCenterY));
+
+                    const faceWidth = Math.sqrt((rightEye.x - leftEye.x) ** 2 + (rightEye.y - leftEye.y) ** 2);
+                    const headRadius = Math.max(0.08, faceWidth * 0.35);
+
+                    const roll = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+                    const yaw = (nose.x - eyeCenterX) * 1.5;
+                    const pitch = (eyeCenterY - nose.y) * 1.2;
+
+                    head.position.set(faceCenter3D.x, faceCenter3D.y + 0.08, 0.02);
+                    head.scale.set(headRadius, headRadius, headRadius);
+                    head.rotation.set(pitch, yaw, -roll);
+                }
+            } else if (mapped.leftShoulder && mapped.rightShoulder && head) {
+                // Fallback en base a hombros si no hay cara
+                const shoulderCenter = {
+                    x: (mapped.leftShoulder.x + mapped.rightShoulder.x) / 2,
+                    y: (mapped.leftShoulder.y + mapped.rightShoulder.y) / 2
+                };
+                head.position.set(shoulderCenter.x, shoulderCenter.y + 0.28, 0.02);
+                head.scale.set(0.1, 0.1, 0.1);
+                head.rotation.set(0, 0, 0);
+            }
 
             const la = mapped.leftShoulder;
             const lw = mapped.leftWrist;
