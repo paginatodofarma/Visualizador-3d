@@ -557,6 +557,12 @@
         function toggleVideoGlobal() {
             showVideoGlobal = !showVideoGlobal;
             document.getElementById('toggleVideoGlobalButton').textContent = showVideoGlobal ? 'Ver video recortado' : 'Ver video global';
+            const canvas = document.getElementById('canvas');
+            if (showVideoGlobal) {
+                canvas.style.zIndex = '3'; // Traer canvas al frente
+            } else {
+                canvas.style.zIndex = '1'; // Devolver atrás
+            }
             if (videoPlane) {
                 videoPlane.visible = !showVideoGlobal;
             }
