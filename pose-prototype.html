@@ -79,7 +79,17 @@
             renderer.setSize(canvasElement.width, canvasElement.height);
             threejsContainer.appendChild(renderer.domElement);
 
-            // Materiales semi-transparentes
+            // Video de fondo como textura Three.js
+            const videoTexture = new THREE.VideoTexture(videoElement);
+            videoTexture.minFilter = THREE.LinearFilter;
+            videoTexture.magFilter = THREE.LinearFilter;
+            videoTexture.format = THREE.RGBFormat;
+            const videoMaterial = new THREE.MeshBasicMaterial({ map: videoTexture });
+            const videoPlane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), videoMaterial);
+            videoPlane.position.z = -0.05;
+            scene.add(videoPlane);
+
+            // Materiales semi-transparentes para la ropa
             const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.45 });
 
             // Torso (plano)
@@ -149,7 +159,8 @@
         async function onResults(results) {
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            // Opcional: dibujar en canvas de debug, si lo quieres
+            // canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks) {
                 statusElement.textContent = drawSkeleton ? 'Cuerpo detectado - Mostrando esqueleto' : 'Cuerpo detectado - Esqueleto oculto';
