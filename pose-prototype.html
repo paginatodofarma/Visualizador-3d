@@ -144,11 +144,12 @@
             'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js',
             'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4/face_mesh.js',
             'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js',
-            'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js'
+            'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3/drawing_utils.js',
+            'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'
         ];
         let loadedScripts = 0;
         const totalScripts = scripts.length;
-        const scriptSizes = [600, 50, 30, 40, 20, 30]; // KB aproximados
+        const scriptSizes = [600, 50, 30, 40, 20, 30, 30]; // KB aproximados
         let totalScriptSize = scriptSizes.reduce((a, b) => a + b, 0); // ~770KB
         const progressFill = document.getElementById('progress-fill');
         const loadingText = document.getElementById('loading-text');
@@ -171,6 +172,8 @@
 
         // Global 3D objects
         let torso, leftArm, rightArm, leftLeg, rightLeg, videoPlane;
+        let shirtModel = null;
+        let shirtLoaded = false;
 
         function updateProgress() {
             loadedScripts++;
@@ -220,6 +223,12 @@
 
         function toggleShirt() {
             showShirt = !showShirt;
+            if (shirtModel && shirtLoaded) {
+                shirtModel.visible = showShirt;
+                torso.visible = false;
+            } else {
+                torso.visible = showShirt;
+            }
             const button = document.getElementById('toggleShirtButton');
             if (button) button.textContent = showShirt ? 'Ocultar camisa' : 'Mostrar camisa';
         }
@@ -538,6 +547,9 @@
             torso.receiveShadow = true;
             scene.add(torso);
 
+            // Cargar modelo 3D de camisa (ejemplo)
+            loadShirtModel();
+
             // Brazos (cilindros)
             const armGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
             leftArm = new THREE.Mesh(armGeometry, material.clone());
@@ -606,6 +618,45 @@
                 scene.add(line);
                 bones.push({ from: pair[0], to: pair[1], line });
             });
+        }
+
+        function loadShirtModel() {
+            if (!THREE.GLTFLoader) {
+                console.warn('GLTFLoader no está disponible. Asegura incluir la librería.');
+                return;
+            }
+            const loader = new THREE.GLTFLoader();
+            const shirtUrl = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Box/glTF/Box.gltf';
+
+            loader.load(shirtUrl,
+                gltf => {
+                    shirtModel = gltf.scene;
+                    shirtModel.traverse(obj => {
+                        if (obj.isMesh) {
+                            obj.castShadow = true;
+                            obj.receiveShadow = true;
+                            obj.material = obj.material.clone();
+                            obj.material.transparent = true;
+                            obj.material.opacity = 0.95;
+                        }
+                    });
+                    shirtModel.scale.set(0.5, 0.5, 0.5);
+                    shirtModel.visible = false;
+                    scene.add(shirtModel);
+                    shirtLoaded = true;
+                    console.log('Modelo de camisa cargado.');
+                },
+                xhr => {
+                    // Estimación de progreso del download
+                    if (xhr.lengthComputable) {
+                        const percent = (xhr.loaded / xhr.total) * 100;
+                        console.log(`Shirt model ${percent.toFixed(1)}% descargado`);
+                    }
+                },
+                error => {
+                    console.error('Error cargando modelo de camisa:', error);
+                }
+            );
         }
 
         function onHandsResults(results) {
@@ -814,9 +865,27 @@
             const torsoHeight = Math.max(0.35, Math.abs(mapped.leftHip.y - mapped.leftShoulder.y) * 1.2);
             torso.position.set(torsoX, torsoY, 0.01);
             torso.scale.set(torsoWidth / 0.2, torsoHeight / 0.3, 1);
-            torso.visible = showShirt;
             leftLeg.visible = showPants;
             rightLeg.visible = showPants;
+
+            if (shirtModel && shirtLoaded) {
+                if (showShirt) {
+                    shirtModel.visible = true;
+                    torso.visible = false;
+
+                    const shirtScaleX = torsoWidth * 1.1;
+                    const shirtScaleY = torsoHeight * 1.15;
+                    const shirtScaleZ = Math.max(0.18, torsoWidth * 0.3);
+                    shirtModel.position.set(torsoX, torsoY, 0.02);
+                    shirtModel.scale.set(shirtScaleX, shirtScaleY, shirtScaleZ);
+                    shirtModel.rotation.set(0, 0, 0);
+                } else {
+                    shirtModel.visible = false;
+                    torso.visible = false;
+                }
+            } else {
+                torso.visible = showShirt;
+            }
 
             // Ajuste de cabeza/cuello con FaceMesh
             if (latestFaceLandmarks && latestFaceLandmarks.length > 0) {
@@ -893,35 +962,7 @@
             }
         }
 
-        async function initPose() {
-            initThreeJS();
-
-            // Brazo derecho
-            const ra = mapped.rightShoulder;
-            const rw = mapped.rightWrist;
-            const rightArmLength = Math.sqrt((rw.x - ra.x) ** 2 + (rw.y - ra.y) ** 2);
-            rightArm.scale.set(1, Math.max(rightArmLength / 0.2, 0.1), 1);
-            rightArm.position.set((ra.x + rw.x) / 2, (ra.y + rw.y) / 2, 0.015);
-            rightArm.rotation.z = Math.atan2(rw.y - ra.y, rw.x - ra.x) - Math.PI / 2;
-
-            // Pierna izquierda
-            const lh = mapped.leftHip;
-            const la2 = mapped.leftAnkle;
-            const leftLegLength = Math.sqrt((la2.x - lh.x) ** 2 + (la2.y - lh.y) ** 2);
-            leftLeg.scale.set(1, Math.max(leftLegLength / 0.3, 0.1), 1);
-            leftLeg.position.set((lh.x + la2.x) / 2, (lh.y + la2.y) / 2, 0.015);
-            leftLeg.rotation.z = Math.atan2(la2.y - lh.y, la2.x - lh.x) - Math.PI / 2;
-
-            // Pierna derecha
-            const rh = mapped.rightHip;
-            const ra2 = mapped.rightAnkle;
-            const rightLegLength = Math.sqrt((ra2.x - rh.x) ** 2 + (ra2.y - rh.y) ** 2);
-            rightLeg.scale.set(1, Math.max(rightLegLength / 0.3, 0.1), 1);
-            rightLeg.position.set((rh.x + ra2.x) / 2, (rh.y + ra2.y) / 2, 0.015);
-            rightLeg.rotation.z = Math.atan2(ra2.y - rh.y, ra2.x - rh.x) - Math.PI / 2;
-        }
-
-        async function initPose() {
+        // Omitido: viejo initPose duplicado, el initPose definitivo está abajo
             initThreeJS();
 
             console.log('Dispositivo móvil detectado:', isMobile);
