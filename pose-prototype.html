@@ -20,6 +20,9 @@
             navigator.serviceWorker.addEventListener('message', event => {
                 if (event.data && event.data.type === 'CACHE_CLEARED') {
                     console.log('Caché limpiado exitosamente');
+                } else if (event.data && event.data.type === 'MODEL_FROM_CACHE') {
+                    // No incrementar downloadedSize si vino de caché
+                    console.log('Modelo cargado desde caché');
                 }
             });
         }
@@ -113,7 +116,7 @@
         <div id="progress-bar">
             <div id="progress-fill"></div>
         </div>
-        <div id="loading-text">Descargando scripts: 0KB / 770KB</div>
+        <div id="loading-text">Cargando scripts: 0KB / 770KB</div>
     </div>
     <h1>Prototipo de Detección de Pose con MediaPipe</h1>
     <p>Esta página detecta poses corporales en tiempo real y muestra el esqueleto.</p>
@@ -173,7 +176,7 @@
             progressFill.style.width = percentage + '%';
             const downloadedKB = downloadedSize;
             const totalKB = totalScriptSize;
-            loadingText.textContent = `Descargando scripts: ${downloadedKB}KB / ${totalKB}KB`;
+            loadingText.textContent = `Cargando scripts: ${downloadedKB}KB / ${totalKB}KB`;
             if (loadedScripts === totalScripts) {
                 setTimeout(() => {
                     loadingText.textContent = 'Cargando modelos de IA...';
