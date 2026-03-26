@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototipo Pose Landmarker - MediaPipe</title>
-    <script>
         // Registrar Service Worker para cachear modelos
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -16,8 +15,14 @@
                         console.log('Error registrando Service Worker:', error);
                     });
             });
+
+            // Escuchar mensajes del service worker
+            navigator.serviceWorker.addEventListener('message', event => {
+                if (event.data && event.data.type === 'CACHE_CLEARED') {
+                    console.log('Caché limpiado exitosamente');
+                }
+            });
         }
-    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -554,6 +559,18 @@
             document.getElementById('toggleVideoGlobalButton').textContent = showVideoGlobal ? 'Ver video recortado' : 'Ver video global';
             if (videoPlane) {
                 videoPlane.visible = !showVideoGlobal;
+            }
+        }
+
+        function clearCache() {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({type: 'CLEAR_CACHE'});
+                statusElement.textContent = 'Limpiando caché de modelos...';
+                setTimeout(() => {
+                    location.reload(); // Recargar para forzar descarga de nuevos modelos
+                }, 1000);
+            } else {
+                statusElement.textContent = 'Service Worker no disponible';
             }
         }
 
