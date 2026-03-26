@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prototipo Pose Landmarker - MediaPipe</title>
+    <script>
+        // Registrar Service Worker para cachear modelos
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Error registrando Service Worker:', error);
+                    });
+            });
+        }
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -861,6 +875,8 @@
             console.log('Dispositivo móvil detectado:', isMobile);
             if (isMobile) {
                 statusElement.textContent = 'Modo móvil activado - Rendimiento optimizado';
+            } else {
+                statusElement.textContent = 'Cargando... (Los modelos se cachearán para futuras visitas)';
             }
 
             pose = new Pose({
