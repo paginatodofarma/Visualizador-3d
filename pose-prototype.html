@@ -211,36 +211,74 @@
         function enhanceMaskWithHandAndFace(maskCanvas) {
             if (!maskCanvas) return;
             const ctx = maskCanvas.getContext('2d');
-            ctx.save();
-            ctx.fillStyle = 'rgba(255,255,255,1)';
 
+            // Primero dibujamos región completa de manos (path) para evitar “huecos” entre dedos
             if (latestHandLandmarks && latestHandLandmarks.length > 0) {
-                const radius = Math.max(maskCanvas.width, maskCanvas.height) * 0.03;
+                ctx.save();
+                ctx.fillStyle = 'rgba(255,255,255,1)';
+                ctx.strokeStyle = 'rgba(255,255,255,1)';
+                ctx.lineWidth = Math.max(1, Math.min(6, maskCanvas.width*0.005));
+
                 latestHandLandmarks.forEach(hand => {
-                    if (!hand) return;
-                    hand.forEach(point => {
-                        const x = point.x * maskCanvas.width;
-                        const y = point.y * maskCanvas.height;
-                        ctx.beginPath();
-                        ctx.arc(x, y, radius, 0, 2 * Math.PI);
-                        ctx.fill();
+                    if (!hand || hand.length < 2) return;
+
+                    // Construye polígono / malla de mano
+                    ctx.beginPath();
+                    const startPoint = hand[0];
+                    ctx.moveTo(startPoint.x * maskCanvas.width, startPoint.y * maskCanvas.height);
+
+                    for (let i = 1; i < hand.length; i++) {
+                        const p = hand[i];
+                        ctx.lineTo(p.x * maskCanvas.width, p.y * maskCanvas.height);
+                    }
+                    ctx.closePath();
+
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Enfina adicionalmente contorno de dedos con líneas (hand skeleton)
+                    const fingerOrders = [
+                        [0,1,2,3,4],    // pulgar
+                        [0,5,6,7,8],    // índice
+                        [0,9,10,11,12], // medio
+                        [0,13,14,15,16],// anular
+                        [0,17,18,19,20] // meñique
+                    ];
+                    ctx.beginPath();
+                    fingerOrders.forEach(path => {
+                        const origin = hand[path[0]];
+                        ctx.moveTo(origin.x * maskCanvas.width, origin.y * maskCanvas.height);
+                        path.slice(1).forEach(idx => {
+                            const p2 = hand[idx];
+                            ctx.lineTo(p2.x * maskCanvas.width, p2.y * maskCanvas.height);
+                        });
                     });
+                    ctx.stroke();
                 });
+
+                ctx.restore();
             }
 
+            // Refuerza región de cara (naso-ojos) para mantener mejor zócalos
             if (latestFaceLandmarks && latestFaceLandmarks.length > 0) {
                 const nose = latestFaceLandmarks[1];
-                if (nose) {
-                    const x = nose.x * maskCanvas.width;
-                    const y = nose.y * maskCanvas.height;
-                    const faceRadius = Math.max(maskCanvas.width, maskCanvas.height) * 0.08;
+                const leftCheek = latestFaceLandmarks[234];
+                const rightCheek = latestFaceLandmarks[454];
+                const chin = latestFaceLandmarks[152];
+                if (nose && leftCheek && rightCheek && chin) {
+                    const centerX = nose.x * maskCanvas.width;
+                    const centerY = nose.y * maskCanvas.height;
+                    const width = Math.abs(rightCheek.x - leftCheek.x) * maskCanvas.width * 1.1;
+                    const height = Math.abs(chin.y - nose.y) * maskCanvas.height * 1.4;
+
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255,255,255,1)';
                     ctx.beginPath();
-                    ctx.arc(x, y, faceRadius, 0, 2 * Math.PI);
+                    ctx.ellipse(centerX, centerY, width/2, height/2, 0, 0, Math.PI*2);
                     ctx.fill();
+                    ctx.restore();
                 }
             }
-
-            ctx.restore();
         }
 
         function applySoftSegmentationMask(ctx, maskCanvas, width, height, inverse) {
