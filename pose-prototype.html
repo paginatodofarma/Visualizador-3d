@@ -150,6 +150,17 @@
         let modelsLoaded = 0;
         const totalModels = 3; // Pose, Hands, Face
 
+        // Global variables for toggles
+        let drawSkeleton = true;
+        let showShirt = true;
+        let showPants = true;
+        let showBackground = true;
+        let inverseMask = false;
+        let showVideoGlobal = false;
+
+        // Global 3D objects
+        let torso, leftArm, rightArm, leftLeg, rightLeg, videoPlane;
+
         function updateProgress() {
             loadedScripts++;
             const percentage = (loadedScripts / totalScripts) * 50; // Scripts = primeros 50%
@@ -176,7 +187,62 @@
                 }, 500);
             }
         }
+        // Toggle functions
+        function toggleSkeleton() {
+            drawSkeleton = !drawSkeleton;
+            const button = document.getElementById('toggleSkeletonButton');
+            if (button) button.textContent = drawSkeleton ? 'Ocultar esqueleto' : 'Mostrar esqueleto';
+        }
 
+        function toggleShirt() {
+            showShirt = !showShirt;
+            const button = document.getElementById('toggleShirtButton');
+            if (button) button.textContent = showShirt ? 'Ocultar camisa' : 'Mostrar camisa';
+        }
+
+        function togglePants() {
+            showPants = !showPants;
+            const button = document.getElementById('togglePantsButton');
+            if (button) button.textContent = showPants ? 'Ocultar pantalón' : 'Mostrar pantalón';
+        }
+
+        function toggleBackground() {
+            showBackground = !showBackground;
+            const button = document.getElementById('toggleBackgroundButton');
+            if (button) button.textContent = showBackground ? 'Desactivar fondo' : 'Activar fondo';
+        }
+
+        function toggleMaskMode() {
+            inverseMask = !inverseMask;
+            const button = document.getElementById('toggleMaskModeButton');
+            if (button) button.textContent = inverseMask ? 'Modo máscara inversa' : 'Modo máscara normal';
+        }
+
+        function toggleVideoGlobal() {
+            showVideoGlobal = !showVideoGlobal;
+            const button = document.getElementById('toggleVideoGlobalButton');
+            if (button) button.textContent = showVideoGlobal ? 'Ver video recortado' : 'Ver video global';
+            const canvas = document.getElementById('canvas');
+            if (showVideoGlobal) {
+                if (canvas) canvas.style.zIndex = '3'; // Traer canvas al frente
+            } else {
+                if (canvas) canvas.style.zIndex = '1'; // Devolver atrás
+            }
+        }
+
+        function clearCache() {
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({type: 'CLEAR_CACHE'});
+                const statusElement = document.getElementById('status');
+                if (statusElement) statusElement.textContent = 'Limpiando caché de modelos...';
+                setTimeout(() => {
+                    location.reload(); // Recargar para forzar descarga de nuevos modelos
+                }, 1000);
+            } else {
+                const statusElement = document.getElementById('status');
+                if (statusElement) statusElement.textContent = 'Service Worker no disponible';
+            }
+        }
         scripts.forEach(url => {
             const script = document.createElement('script');
             script.src = url;
@@ -205,15 +271,7 @@
             let face;
             let latestHandLandmarks = null;
             let latestFaceLandmarks = null;
-            let drawSkeleton = true;
             let head = null;
-            let showShirt = true;
-            let showPants = true;
-            let showBackground = true;
-            let inverseMask = false;
-            let showVideoGlobal = false;
-            let videoPlane = null;
-            let torso, leftArm, rightArm, leftLeg, rightLeg;
             let joints = {};
             let bones = [];
             let previousMapped = null;
@@ -524,60 +582,6 @@
                 scene.add(line);
                 bones.push({ from: pair[0], to: pair[1], line });
             });
-        }
-
-        function toggleSkeleton() {
-            drawSkeleton = !drawSkeleton;
-            toggleSkeletonButton.textContent = drawSkeleton ? 'Ocultar esqueleto' : 'Mostrar esqueleto';
-        }
-
-        function toggleShirt() {
-            showShirt = !showShirt;
-            torso.visible = showShirt;
-            document.getElementById('toggleShirtButton').textContent = showShirt ? 'Ocultar camisa' : 'Mostrar camisa';
-        }
-
-        function togglePants() {
-            showPants = !showPants;
-            if (leftLeg) leftLeg.visible = showPants;
-            if (rightLeg) rightLeg.visible = showPants;
-            document.getElementById('togglePantsButton').textContent = showPants ? 'Ocultar pantalón' : 'Mostrar pantalón';
-        }
-
-        function toggleBackground() {
-            showBackground = !showBackground;
-            document.getElementById('toggleBackgroundButton').textContent = showBackground ? 'Desactivar fondo' : 'Activar fondo';
-        }
-
-        function toggleMaskMode() {
-            inverseMask = !inverseMask;
-            document.getElementById('toggleMaskModeButton').textContent = inverseMask ? 'Modo máscara inversa' : 'Modo máscara normal';
-        }
-
-        function toggleVideoGlobal() {
-            showVideoGlobal = !showVideoGlobal;
-            document.getElementById('toggleVideoGlobalButton').textContent = showVideoGlobal ? 'Ver video recortado' : 'Ver video global';
-            const canvas = document.getElementById('canvas');
-            if (showVideoGlobal) {
-                canvas.style.zIndex = '3'; // Traer canvas al frente
-            } else {
-                canvas.style.zIndex = '1'; // Devolver atrás
-            }
-            if (videoPlane) {
-                videoPlane.visible = !showVideoGlobal;
-            }
-        }
-
-        function clearCache() {
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({type: 'CLEAR_CACHE'});
-                statusElement.textContent = 'Limpiando caché de modelos...';
-                setTimeout(() => {
-                    location.reload(); // Recargar para forzar descarga de nuevos modelos
-                }, 1000);
-            } else {
-                statusElement.textContent = 'Service Worker no disponible';
-            }
         }
 
         function onHandsResults(results) {
