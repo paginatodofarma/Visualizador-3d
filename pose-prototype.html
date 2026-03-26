@@ -113,7 +113,7 @@
         <div id="progress-bar">
             <div id="progress-fill"></div>
         </div>
-        <div id="loading-text">Descargando paquetes: 0/6</div>
+        <div id="loading-text">Descargando scripts: 0KB / 770KB</div>
     </div>
     <h1>Prototipo de Detección de Pose con MediaPipe</h1>
     <p>Esta página detecta poses corporales en tiempo real y muestra el esqueleto.</p>
@@ -143,12 +143,17 @@
         ];
         let loadedScripts = 0;
         const totalScripts = scripts.length;
+        const scriptSizes = [600, 50, 30, 40, 20, 30]; // KB aproximados
+        let totalScriptSize = scriptSizes.reduce((a, b) => a + b, 0); // ~770KB
         const progressFill = document.getElementById('progress-fill');
         const loadingText = document.getElementById('loading-text');
         const loadingOverlay = document.getElementById('loading-overlay');
 
         let modelsLoaded = 0;
         const totalModels = 3; // Pose, Hands, Face
+        const modelSizes = [10000, 5000, 3000]; // KB aproximados (10MB, 5MB, 3MB)
+        let totalModelSize = modelSizes.reduce((a, b) => a + b, 0); // ~18MB
+        let downloadedSize = 0;
 
         // Global variables for toggles
         let drawSkeleton = true;
@@ -163,9 +168,12 @@
 
         function updateProgress() {
             loadedScripts++;
+            downloadedSize += scriptSizes[loadedScripts - 1];
             const percentage = (loadedScripts / totalScripts) * 50; // Scripts = primeros 50%
             progressFill.style.width = percentage + '%';
-            loadingText.textContent = `Descargando paquetes: ${loadedScripts}/${totalScripts}`;
+            const downloadedKB = downloadedSize;
+            const totalKB = totalScriptSize;
+            loadingText.textContent = `Descargando scripts: ${downloadedKB}KB / ${totalKB}KB`;
             if (loadedScripts === totalScripts) {
                 setTimeout(() => {
                     loadingText.textContent = 'Cargando modelos de IA...';
@@ -176,11 +184,14 @@
 
         function updateModelProgress() {
             modelsLoaded++;
+            downloadedSize += modelSizes[modelsLoaded - 1];
             const baseProgress = 50; // Scripts completados = 50%
             const modelProgress = (modelsLoaded / totalModels) * 50; // Modelos = otros 50%
             const totalPercentage = baseProgress + modelProgress;
             progressFill.style.width = totalPercentage + '%';
-            loadingText.textContent = `Cargando modelos: ${modelsLoaded}/${totalModels}`;
+            const downloadedMB = (downloadedSize / 1000).toFixed(1);
+            const totalMB = (totalScriptSize + totalModelSize) / 1000;
+            loadingText.textContent = `Cargando modelos: ${downloadedMB}MB / ${totalMB}MB`;
             if (modelsLoaded === totalModels) {
                 setTimeout(() => {
                     loadingOverlay.classList.add('hidden');
