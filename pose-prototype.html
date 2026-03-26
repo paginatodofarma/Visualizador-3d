@@ -182,7 +182,7 @@
             loadingText.textContent = `Cargando scripts: ${downloadedKB}KB / ${totalKB}KB`;
             if (loadedScripts === totalScripts) {
                 setTimeout(() => {
-                    loadingText.textContent = 'Cargando modelos de IA...';
+                    loadingText.textContent = 'Cargando modelos...';
                     startApp();
                 }, 500);
             }
@@ -190,20 +190,20 @@
 
         function updateModelProgress() {
             modelsLoaded++;
-            if (cacheHits < modelsLoaded) {
-                // Si no todos vinieron de caché, incrementar tamaño
+            if (cacheHits === 0) {
+                // Si no hay hits de caché, incrementar tamaño descargado
                 downloadedSize += modelSizes[modelsLoaded - 1];
             }
             const baseProgress = 50; // Scripts completados = 50%
             const modelProgress = (modelsLoaded / totalModels) * 50; // Modelos = otros 50%
             const totalPercentage = baseProgress + modelProgress;
             progressFill.style.width = totalPercentage + '%';
-            if (cacheHits === totalModels) {
-                loadingText.textContent = 'Modelos cargados desde caché';
+            if (cacheHits > 0) {
+                loadingText.textContent = 'Cargando modelos desde caché';
             } else {
                 const downloadedMB = (downloadedSize / 1000).toFixed(1);
                 const totalMB = (totalScriptSize + totalModelSize) / 1000;
-                loadingText.textContent = `Cargando modelos: ${downloadedMB}MB / ${totalMB}MB`;
+                loadingText.textContent = `Descargando modelos: ${downloadedMB}MB / ${totalMB}MB`;
             }
             if (modelsLoaded === totalModels) {
                 setTimeout(() => {
