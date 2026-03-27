@@ -129,6 +129,7 @@
     <button class="share-button" id="toggleMaskModeButton" onclick="toggleMaskMode()" style="background: #17a2b8;">Modo máscara normal</button>
     <button class="share-button" id="toggleVideoGlobalButton" onclick="toggleVideoGlobal()" style="background: #6610f2;">Ver video global</button>
     <button class="share-button" id="clearCacheButton" onclick="clearCache()" style="background: #dc3545;">Limpiar caché modelos</button>
+    <button class="share-button" id="toggleBodyButton" onclick="toggleBody()" style="background: #28a745;">Mostrar cuerpo</button>
     <video id="video" autoplay playsinline></video>
     <div id="preview-wrapper">
         <canvas id="canvas"></canvas>
@@ -169,6 +170,7 @@
         let showBackground = true;
         let inverseMask = false;
         let showVideoGlobal = false;
+        let showBody = false;
 
         // Global 3D objects
         let scene, camera, renderer;
@@ -176,6 +178,8 @@
         let shirtGroup = null;
         let shirtModel = null;
         let shirtLoaded = false;
+        let bodyModel = null;
+        let bodyLoaded = false;
 
         function updateProgress() {
             loadedScripts++;
@@ -552,6 +556,9 @@
             // Cargar modelo 3D de camisa (ejemplo)
             loadShirtModel();
 
+            // Cargar modelo de cuerpo con skeleton
+            loadBodyModel();
+
             // Brazos (cilindros)
             const armGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 8);
             leftArm = new THREE.Mesh(armGeometry, material.clone());
@@ -710,6 +717,50 @@
             shirtLoaded = true;
 
             console.log('Modelo de camisa fallback creado.');
+        }
+
+        function loadBodyModel() {
+            const bodyUrl = './Modelos/RiggedFigure.glb';
+            if (!THREE.GLTFLoader) {
+                console.warn('GLTFLoader no disponible para cargar modelo de cuerpo.');
+                return;
+            }
+            const loader = new THREE.GLTFLoader();
+            loader.load(bodyUrl,
+                gltf => {
+                    bodyModel = gltf.scene;
+                    bodyModel.name = 'Cuerpo con skeleton';
+                    bodyModel.traverse(obj => {
+                        if (obj.isMesh) {
+                            obj.castShadow = true;
+                            obj.receiveShadow = true;
+                            obj.material.transparent = true;
+                            obj.material.opacity = 0.8;
+                        }
+                    });
+                    // Centrar y escalar inicial
+                    const box = new THREE.Box3().setFromObject(bodyModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    bodyModel.position.sub(center);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxSize = Math.max(size.x, size.y, size.z);
+                    const baseScale = 0.5 / maxSize;
+                    bodyModel.scale.set(baseScale, baseScale, baseScale);
+                    bodyModel.visible = false;
+                    scene.add(bodyModel);
+                    bodyLoaded = true;
+                    console.log('Modelo de cuerpo con skeleton cargado.');
+                },
+                xhr => {
+                    if (xhr.total) {
+                        const percent = (xhr.loaded / xhr.total * 100).toFixed(1);
+                        console.log(`Descargando cuerpo ${percent}%`);
+                    }
+                },
+                err => {
+                    console.warn('Error cargando modelo de cuerpo.', err);
+                }
+            );
         }
 
         function onHandsResults(results) {
