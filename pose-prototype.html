@@ -173,6 +173,7 @@
         // Global 3D objects
         let scene, camera, renderer;
         let torso, leftArm, rightArm, leftLeg, rightLeg, videoPlane;
+        let shirtGroup = null;
         let shirtModel = null;
         let shirtLoaded = false;
 
@@ -646,9 +647,23 @@
                             obj.material.opacity = 0.95;
                         }
                     });
-                    shirtModel.scale.set(0.6, 0.6, 0.25);
-                    shirtModel.visible = false;
-                    scene.add(shirtModel);
+
+                    // Centrar y normalizar tamaño inicial para evitar offset extra
+                    const box = new THREE.Box3().setFromObject(shirtModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    shirtModel.position.sub(center);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxSize = Math.max(size.x, size.y, size.z, 0.001);
+                    const baseScale = 0.6 / maxSize;
+                    shirtModel.scale.set(baseScale, baseScale, baseScale);
+
+                    // Crear grupo para controlar el pivot/posición fácilmente
+                    shirtGroup = new THREE.Group();
+                    shirtGroup.name = 'Camisa 3D grupo';
+                    shirtModel.position.sub(center); // centrar modelo en origen
+                    shirtGroup.add(shirtModel);
+                    shirtGroup.visible = false;
+                    scene.add(shirtGroup);
                     shirtLoaded = true;
                     console.log('Modelo de camisa cargado desde GLTF.');
                 },
@@ -666,7 +681,7 @@
         }
 
         function createFallbackShirtModel() {
-            const shirtGroup = new THREE.Group();
+            shirtGroup = new THREE.Group();
 
             // Cuerpo de la camisa (plano engrosado)
             const torsoGeometry = new THREE.BoxGeometry(0.5, 0.6, 0.15);
@@ -908,17 +923,43 @@
 
             if (shirtModel && shirtLoaded) {
                 if (showShirt) {
-                    shirtModel.visible = true;
+                    shirtGroup.visible = true;
                     torso.visible = false;
 
-                    const shirtScaleX = torsoWidth * 1.1;
-                    const shirtScaleY = torsoHeight * 1.15;
-                    const shirtScaleZ = Math.max(0.18, torsoWidth * 0.3);
-                    shirtModel.position.set(torsoX, torsoY, 0.02);
-                    shirtModel.scale.set(shirtScaleX, shirtScaleY, shirtScaleZ);
-                    shirtModel.rotation.set(0, 0, 0);
+                    const shoulderVector = {
+                        x: mapped.rightShoulder.x - mapped.leftShoulder.x,
+                        y: mapped.rightShoulder.y - mapped.leftShoulder.y
+                    };
+                    let shoulderAngle = Math.atan2(shoulderVector.y, shoulderVector.x);
+
+                    // Normalizar para evitar rotación 180 bruta
+                    if (shoulderAngle > Math.PI / 2) shoulderAngle -= Math.PI;
+                    if (shoulderAngle < -Math.PI / 2) shoulderAngle += Math.PI;
+
+                    // Posición de camisa arriba del torso (altura de pecho/hombros)
+                    const shoulderCenterY = (mapped.leftShoulder.y + mapped.rightShoulder.y) / 2;
+                    const hipCenterY = (mapped.leftHip.y + mapped.rightHip.y) / 2;
+                    // Ajuste vertical: cerca de la altura de hombros, ligeramente por debajo para cubrir el pecho.
+                    const shirtY = shoulderCenterY - Math.abs(shoulderCenterY - hipCenterY) * 0.22;
+
+                    // Si la camisa todavía está muy baja, fijar en un offset de torsoX/torsoY con un fallback a torsoY
+                    const finalY = shirtY || (torsoY + torsoHeight * 0.15);
+
+                    shirtGroup.position.set(torsoX, finalY, 0.03);
+                    shirtGroup.rotation.set(0, 0, shoulderAngle);
+
+                    // Escalado proporcional al cuerpo detectado:
+                    // - ancho según hombros
+                    // - alto según distancia hombros-cadera
+                    const bodyWidth = Math.abs(mapped.rightShoulder.x - mapped.leftShoulder.x);
+                    const bodyHeight = Math.abs((mapped.leftHip.y + mapped.rightHip.y)/2 - (mapped.leftShoulder.y + mapped.rightShoulder.y)/2);
+                    const shirtScaleX = Math.max(0.45, bodyWidth * 1.2); // ancho de camisa en relación al ancho de hombros
+                    const shirtScaleY = Math.max(0.48, bodyHeight * 1.4); // alto de camisa desde hombros a cadera
+                    const shirtScaleZ = Math.max(0.22, bodyWidth * 0.45); // grosor profundo ligero
+
+                    shirtGroup.scale.set(shirtScaleX, shirtScaleY, shirtScaleZ);
                 } else {
-                    shirtModel.visible = false;
+                    shirtGroup.visible = false;
                     torso.visible = false;
                 }
             } else {
